@@ -128,13 +128,17 @@ func TestFetchEnvironment(t *testing.T) {
 			defer cancel()
 			api := func(ctx context.Context, method, path string, body any) ([]byte, error) {
 				switch {
+				case strings.Contains(path, "/environments/Preview/secrets"):
+					return []byte(`{"secrets":[{"name":"TOKEN"}]}`), nil
+				case strings.Contains(path, "/environments/Preview/variables"):
+					return []byte(`{"variables":[{"name":"URL"}]}`), nil
 				case method == "POST" && strings.HasSuffix(path, "/ghenv.yml/dispatches"):
 					request := body.(map[string]any)
 					if request["return_run_details"] != true || request["ref"] != "main" {
 						t.Fatal("incorrect dispatch")
 					}
 					inputs := request["inputs"].(map[string]string)
-					if inputs["environment"] != "development" || inputs["secret_names"] != "TOKEN" || inputs["variable_names"] != "URL" {
+					if inputs["environment"] != "Preview" || inputs["secret_names"] != "TOKEN" || inputs["variable_names"] != "URL" {
 						t.Fatal("incorrect inputs")
 					}
 					requestID = inputs["request_id"]
@@ -187,7 +191,7 @@ func TestFetchEnvironment(t *testing.T) {
 					return nil, nil
 				}
 			}
-			got, err := fetchEnvironment(ctx, api, options{Repo: "owner/repo", Environment: "development", Ref: "main", Secrets: "TOKEN", Variables: "URL"})
+			got, err := fetchEnvironment(ctx, api, options{Repo: "owner/repo", Environment: "Preview", Ref: "main", Secrets: "TOKEN", Variables: "URL"})
 			if mode == "success" {
 				if err != nil || !reflect.DeepEqual(got, want) {
 					t.Fatalf("fetch failed: %v", err)
@@ -223,10 +227,35 @@ func TestOptions(t *testing.T) {
 		{"--repo", "owner/repo", "--timeout", "0s", "--secrets", "TOKEN", "--", "echo"},
 		{"--repo", "owner/repo", "--", "echo"},
 		{"--repo", "owner/repo", "--secrets", "TOKEN", "surprise", "--", "echo"},
+		{"--repo", "owner/repo", "--env", "Prod", "--secrets", "TOKEN", "--", "echo"},
+		{"--repo", "owner/repo", "--env", "Production", "--secrets", "TOKEN", "--", "echo"},
 	} {
 		if _, err := parseOptions(args); err == nil {
 			t.Fatalf("accepted invalid arguments %v", args)
 		}
+	}
+}
+
+func TestPreviewScope(t *testing.T) {
+	for _, environment := range []string{"Prod", "Production", "production", "development", ""} {
+		api := func(context.Context, string, string, any) ([]byte, error) {
+			t.Fatal("API called for non-Preview environment")
+			return nil, nil
+		}
+		if err := validatePreviewScope(context.Background(), api, options{Environment: environment, Secrets: "TOKEN"}); err == nil {
+			t.Fatalf("accepted %s", environment)
+		}
+	}
+	calledDispatch := false
+	api := func(_ context.Context, method, _ string, _ any) ([]byte, error) {
+		if method == "POST" {
+			calledDispatch = true
+		}
+		return []byte(`{"secrets":[]}`), nil
+	}
+	_, err := fetchEnvironment(context.Background(), api, options{Repo: "owner/repo", Environment: "Preview", Secrets: "TOKEN"})
+	if err == nil || calledDispatch {
+		t.Fatal("missing Preview secret must fail before dispatch, without falling back")
 	}
 }
 
@@ -336,6 +365,10 @@ func TestFakeGH(t *testing.T) {
 		}
 	}
 	switch {
+	case strings.Contains(endpoint, "/environments/Preview/secrets"):
+		fmt.Print(`{"secrets":[{"name":"GHENV_TEST_CHILD"},{"name":"GHENV_TEST_VALUE"}]}`)
+	case strings.Contains(endpoint, "/environments/Preview/variables"):
+		fmt.Print(`{"variables":[{"name":"GHENV_TEST_EMPTY"}]}`)
 	case method == "POST":
 		var request struct {
 			ReturnRunDetails bool              `json:"return_run_details"`
