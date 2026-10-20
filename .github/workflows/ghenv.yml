@@ -47,8 +47,7 @@ jobs:
         run: go build -o "$RUNNER_TEMP/ghenv" .
       - name: Encrypt requested values
         env:
-          GHENV_SECRETS_JSON: ${{ toJSON(secrets) }}
-          GHENV_VARS_JSON: ${{ toJSON(vars) }}
+          GHENV_PREVIEW_BUNDLE: ${{ secrets.GHENV_PREVIEW_BUNDLE }}
           GHENV_SECRET_NAMES: ${{ inputs.secret_names }}
           GHENV_VAR_NAMES: ${{ inputs.variable_names }}
           GHENV_PUBLIC_KEY: ${{ inputs.public_key }}

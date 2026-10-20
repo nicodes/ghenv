@@ -1,39 +1,83 @@
 # ghenv
 
-Run a local command with named GitHub Actions secrets and variables, without
-creating a local `.env` file. Go CLI, GitHub authentication, no vault service.
+Run a local command with an explicitly approved set of GitHub-hosted Preview
+credentials. Go CLI, GitHub authentication, no local `.env` file or vault service.
 
 ```sh
-ghenv run --repo nicodes/ghenv --secrets DEMO_SECRET --vars DEMO_MESSAGE -- npm run dev
+ghenv run --repo OWNER/REPO --secrets API_KEY --vars API_BASE_URL -- npm run dev
 ```
 
-## First demo
+## Setup
 
-Requires Go 1.24+, [GitHub CLI](https://cli.github.com/), a GitHub.com repository
-with Actions enabled, permission to dispatch workflows and delete artifacts
-(Actions read/write for a fine-grained token), and read access to Preview secret
-and variable metadata. For the normal setup, install the workflow on the
-repository's default branch. For this first demo, use this repository after
-the PR is merged.
+Requires Go 1.24+, [GitHub CLI](https://cli.github.com/), Linux or macOS, and a
+GitHub.com repository with Actions enabled. Authenticate with `gh auth login`.
+A fine-grained token needs Actions read/write for dispatch and artifact cleanup.
+Environment approval and branch restrictions still apply.
+
+Install `.github/workflows/ghenv.yml` in the repository holding your Preview
+configuration. In another repository, change its checkout step to build a
+reviewed, immutable commit of `nicodes/ghenv`, rather than application code.
+For the normal setup, install the workflow on the default branch. `--ref`
+defaults to `main` and must identify a trusted workflow revision.
+
+Create a GitHub environment named **`Preview`**. Its owner must curate a single
+secret named **`GHENV_PREVIEW_BUNDLE`** containing JSON like this:
+
+```json
+{
+  "version": 1,
+  "environment": "Preview",
+  "repository": "OWNER/REPO",
+  "secrets": {
+    "API_KEY": "replace-with-a-development-only-credential"
+  },
+  "variables": {
+    "API_BASE_URL": "http://127.0.0.1:3000"
+  }
+}
+```
+
+Use the actual repository name reported by GitHub, including its casing. Paste
+this JSON into the GitHub secret form or the interactive prompt below; no
+plaintext local file is needed. The entire bundle must fit GitHub's 48 KiB
+per-secret limit.
 
 ```sh
-gh auth login
+gh secret set GHENV_PREVIEW_BUNDLE --repo OWNER/REPO --env Preview
 go install github.com/nicodes/ghenv@latest
-
-# Enter a development-only secret at the prompt; do not put it in shell history.
-gh secret set DEMO_SECRET --repo nicodes/ghenv --env Preview
-gh variable set DEMO_MESSAGE --body 'Hello from GitHub' --repo nicodes/ghenv --env Preview
-
-# Show the variable and verify the secret arrived without printing its value.
-ghenv run --repo nicodes/ghenv --secrets DEMO_SECRET --vars DEMO_MESSAGE -- \
-  sh -c 'printf "%s\n" "$DEMO_MESSAGE"; test -n "$DEMO_SECRET" && echo "Secret injected"'
+ghenv run --repo OWNER/REPO --secrets API_KEY --vars API_BASE_URL -- npm run dev
 ```
 
-Local runs use **`Preview` only**. Create it in repository Settings → Environments
-and define every requested secret and variable there. The CLI checks environment
-metadata before dispatch and refuses missing entries instead of accepting
-repository or organization fallback. `--env Prod`, `--env Production` and other
-environment names are rejected; the handoff job is also fixed to `Preview`.
+The bundle is the owner-maintained export allowlist. Every permitted dispatcher
+who obtains any required environment approval can request any entry in it. Only
+put development credentials there. Existing standalone Actions secrets and
+variables are not automatically imported; migrate approved development values
+into this bundle before using the hardened workflow.
+
+## Export boundary
+
+The workflow passes **only `GHENV_PREVIEW_BUNDLE`** to the exporter. It never
+serializes the surrounding GitHub secrets or variables contexts. The exporter
+validates the bundle's version, `Preview` scope, and repository against trusted
+`GITHUB_REPOSITORY` metadata before selecting requested entries. Direct API
+callers receive the same checks as the CLI. Missing names, malformed or ambiguous
+JSON, unsupported scope/version, foreign repositories, duplicate names, NUL
+bytes, and `GITHUB_TOKEN` exports fail before an artifact is produced.
+
+`--env` defaults to `Preview`; all other environment names are refused. The
+workflow job is also fixed to `Preview`. Production-marked bundles are rejected,
+including one returned through GitHub's same-name secret fallback.
+
+GitHub's merged secret context does not attest where an individual value came
+from. **Reserve `GHENV_PREVIEW_BUNDLE` exclusively for development credentials at
+all GitHub scopes, and never reuse that name for production.** A valid
+Preview-marked bundle at repository or organization scope can still be selected
+by GitHub's fallback. Its contents must remain development-only. The scope
+marker prevents mixing correctly labelled bundles; it cannot detect a
+production credential that an owner incorrectly labels as Preview. Restrict who
+can change the bundle, workflow, and code it builds.
+
+## Running commands
 
 ```sh
 ghenv run --repo OWNER/REPO --env Preview \
@@ -41,68 +85,55 @@ ghenv run --repo OWNER/REPO --env Preview \
   --timeout 10m -- npm run dev
 ```
 
-Flags go before `--`; the command and its arguments go after it. Values replace
-matching variables inherited by the child process. Empty values are supported;
-missing names, duplicate names, NUL bytes and `GITHUB_TOKEN` are rejected. The
-command inherits the terminal streams, receives interrupt/termination signals,
-and its ordinary exit code is returned by `ghenv`.
+Flags go before `--`; the command and its arguments go after it. Requested values
+replace matching variables inherited by the child. The command inherits terminal
+streams and its ordinary exit code is returned by `ghenv`. Interactive children
+receive the foreground terminal.
 
-## How it works
+The child runs in its own process group. Interrupt, termination, and hangup
+signals received by `ghenv` are forwarded to that group and start a five-second
+shutdown deadline. When the command exits, remaining group members are
+terminated too, with the same bounded grace period. Remaining members then
+receive SIGKILL; a second signal received by `ghenv` accelerates cleanup.
+Terminal Ctrl-C goes directly to the foreground command. If that command
+handles or ignores it without exiting, `ghenv` keeps waiting; send SIGTERM to
+`ghenv` to initiate bounded group cleanup. This is process
+supervision, not a sandbox: a program deliberately creating another session or
+process group can escape that cleanup. SIGKILL of `ghenv` itself cannot run cleanup.
+
+## Encrypted handoff
 
 1. The CLI generates a temporary RSA-3072 key pair in memory and dispatches
-   `.github/workflows/ghenv.yml` with its public key and requested names.
-2. The workflow builds the same Go program and selects only those names from
-   its GitHub secrets and variables. A random AES-256-GCM key encrypts the JSON;
-   RSA-OAEP-SHA256 encrypts that key. The request ID authenticates the payload.
-3. GitHub stores an artifact containing only ciphertext, with one-day retention.
-4. The CLI downloads it, decrypts in memory, attempts to delete the artifact,
-   and launches your command with the values in its environment.
+   `ghenv.yml` with its public key and requested names.
+2. The workflow validates the fixed Preview bundle and selects permitted entries.
+   AES-256-GCM encrypts the JSON, and RSA-OAEP-SHA256 wraps the random AES key.
+   The unique request ID authenticates the payload.
+3. GitHub stores only ciphertext in an artifact with one-day retention.
+4. The CLI downloads and decrypts in memory, attempts to delete the artifact,
+   then launches the command with the selected values in its environment.
 
 No private key or decrypted payload is written to disk by the CLI. The workflow
-does not write plaintext secret files. There is no local cache, so each invocation
-waits for an Actions runner and any environment approval. An interrupted or failed
-request can leave ciphertext until retention expires; the remote job may continue.
+does not write plaintext credential files. Each invocation waits for a runner
+and any environment approval. A failed or interrupted request can leave
+ciphertext until retention expires, and its remote job may continue.
 
-## Scope and trust
+**Local users and administrators can inspect injected secrets.** An application
+can print or persist its environment. Keys developers must never read need to
+stay behind a remote API. Browser-facing settings such as `EXPO_PUBLIC_*` remain
+public. Go does not guarantee complete erasure of values from memory.
 
-This is a first demo for GitHub.com and POSIX development machines. It is not a
-GitHub-supported secret retrieval feature. Actions jobs can access secrets, while
-the secrets REST API cannot read their values. This workflow deliberately makes
-requested values available to developers who can dispatch it and obtain approval
-for its environment. Use development credentials and environment protection
-rules. An environment name does not prove that a credential is a test credential;
-put only test keys in Preview. Anyone trusted to modify the workflow or the code it builds can change what it
-exports. Review those changes as you would any other workflow that handles secrets.
+## Replacing dotenv files
 
-The initial handoff workflow builds Go code from its own repository. To use a
-different repository, install the workflow there and adjust its checkout/build
-steps to build a reviewed, immutable commit of `nicodes/ghenv`; do not build
-untrusted application code in a job that exports secrets. The CLI's `--repo`
-always identifies the repository holding the secrets and workflow. `--ref`
-defaults to `main` and must identify a trusted workflow revision.
+Injection can replace scalar dotenv settings when the app reads its process
+environment. Map bundle entry names to those the app expects. Public client
+settings may require a framework prefix such as `EXPO_PUBLIC_`; never add that
+prefix to a private key.
 
-**This does not hide secrets from the person running the command.** The launched
-application, its descendants, the local account and a machine administrator can
-inspect, print or persist their environment. A developer who controls the app can
-add code that prints any injected secret. If developers must never access a key,
-keep it in a remote backend and give local development a limited API instead.
-Browser-facing variables (for example `EXPO_PUBLIC_*`) remain public. Values
-still exist in process memory; Go does not guarantee their complete erasure.
-Do not use shell tracing or commands that print secrets.
-
-## Replacing existing dotenv files
-
-Environment injection can replace scalar values in dotenv files when the app
-reads its process environment. Define the required values in Preview and map
-their names to those the app expects. A public client setting can require a
-framework prefix such as `EXPO_PUBLIC_`; never add that prefix to a private key.
-
-Check the launch command before removing files: dotenv loaders that override
-the inherited environment, shell scripts that source `.env`, Docker Compose
-`env_file` entries, and tools that read credential files need an adapter or a
-configuration change. For Expo trials, set `EXPO_NO_DOTENV=1` to prevent loading
-old files. Locally generated database credentials and ports also need a local
-configuration source. The CLI does not delete or rewrite existing dotenv files.
+Check the launcher before removing files: dotenv overrides, shell scripts that
+source `.env`, Docker Compose `env_file`, and tools requiring credential files
+need an adapter. For Expo, set `EXPO_NO_DOTENV=1` to prevent loading old files.
+Locally generated database credentials and ports also need a local configuration
+source. `ghenv` does not remove inherited production settings or rewrite files.
 
 ## Development
 
@@ -112,6 +143,9 @@ go vet ./...
 go build -o ghenv .
 ```
 
-Tests exercise encrypted transport through a simulated GitHub API, child-process
-injection, payload tampering, wrong keys, request binding, missing values and
-artifact cleanup. They do not require credentials or access real secrets.
+Tests use synthetic values. They cover encrypted transport, direct exporter
+bypass attempts, invalid/fallback bundles, archive validation, process injection,
+exit status, and cleanup of descendants that ignore SIGTERM. Linux and macOS
+process tests also cover a wrapper that exits before its descendant, foreground
+terminal input/restoration, and terminal Ctrl-C cleanup. No live credentials
+are needed for these checks.

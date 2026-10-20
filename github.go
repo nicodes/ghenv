@@ -66,8 +66,8 @@ func fetchEnvironment(ctx context.Context, api apiFunc, o options) (map[string]s
 	if err != nil {
 		return nil, err
 	}
-	if err := validatePreviewScope(ctx, api, o); err != nil {
-		return nil, err
+	if o.Environment != "Preview" {
+		return nil, errors.New("local runs only support the Preview environment; production is refused")
 	}
 	privateKey, err := rsa.GenerateKey(rand.Reader, 3072)
 	if err != nil {
@@ -179,50 +179,6 @@ func fetchEnvironment(ctx context.Context, api apiFunc, o options) (map[string]s
 		}
 	}
 	return values, nil
-}
-
-// Check names in the environment itself so repository or organization fallback
-// cannot silently supply a credential when a Preview entry is missing.
-func validatePreviewScope(ctx context.Context, api apiFunc, o options) error {
-	if o.Environment != "Preview" {
-		return errors.New("local runs only support the Preview environment; production is refused")
-	}
-	for _, group := range []struct{ kind, names string }{{"secrets", o.Secrets}, {"variables", o.Variables}} {
-		if group.names == "" {
-			continue
-		}
-		found := make(map[string]bool)
-		for page := 1; ; page++ {
-			path := fmt.Sprintf("repos/%s/environments/Preview/%s?per_page=100&page=%d", o.Repo, group.kind, page)
-			data, err := api(ctx, "GET", path, nil)
-			if err != nil {
-				return fmt.Errorf("checking Preview %s: %w", group.kind, err)
-			}
-			var response struct {
-				Secrets   []struct{ Name string } `json:"secrets"`
-				Variables []struct{ Name string } `json:"variables"`
-			}
-			if json.Unmarshal(data, &response) != nil {
-				return errors.New("invalid Preview name listing")
-			}
-			entries := response.Secrets
-			if group.kind == "variables" {
-				entries = response.Variables
-			}
-			for _, entry := range entries {
-				found[entry.Name] = true
-			}
-			if len(entries) < 100 {
-				break
-			}
-		}
-		for _, name := range strings.Split(group.names, ",") {
-			if !found[name] {
-				return fmt.Errorf("%s is not defined in Preview %s; repository and organization fallback is refused", name, group.kind)
-			}
-		}
-	}
-	return nil
 }
 
 func readArtifact(data []byte) ([]byte, error) {
