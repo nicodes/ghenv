@@ -10,32 +10,33 @@ ghenv run --repo nicodes/ghenv --secrets DEMO_SECRET --vars DEMO_MESSAGE -- npm 
 ## First demo
 
 Requires Go 1.24+, [GitHub CLI](https://cli.github.com/), a GitHub.com repository
-with Actions enabled, and permission to dispatch workflows and delete artifacts
-(Actions read/write for a fine-grained token). The workflow must exist on the
-repository's default branch before GitHub accepts manual dispatches. For this
-first demo, use this repository after the PR is merged.
+with Actions enabled, permission to dispatch workflows and delete artifacts
+(Actions read/write for a fine-grained token), and read access to Preview secret
+and variable metadata. For the normal setup, install the workflow on the
+repository's default branch. For this first demo, use this repository after
+the PR is merged.
 
 ```sh
 gh auth login
 go install github.com/nicodes/ghenv@latest
 
 # Enter a development-only secret at the prompt; do not put it in shell history.
-gh secret set DEMO_SECRET --repo nicodes/ghenv
-gh variable set DEMO_MESSAGE --body 'Hello from GitHub' --repo nicodes/ghenv
+gh secret set DEMO_SECRET --repo nicodes/ghenv --env Preview
+gh variable set DEMO_MESSAGE --body 'Hello from GitHub' --repo nicodes/ghenv --env Preview
 
 # Show the variable and verify the secret arrived without printing its value.
 ghenv run --repo nicodes/ghenv --secrets DEMO_SECRET --vars DEMO_MESSAGE -- \
   sh -c 'printf "%s\n" "$DEMO_MESSAGE"; test -n "$DEMO_SECRET" && echo "Secret injected"'
 ```
 
-The default GitHub environment is `development`; create it in repository Settings
-→ Environments and put environment-specific values there if desired. Repository
-and permitted organization values are also available through the workflow's
-`secrets` and `vars` contexts. Environment values take precedence according to
-GitHub's context rules.
+Local runs use **`Preview` only**. Create it in repository Settings → Environments
+and define every requested secret and variable there. The CLI checks environment
+metadata before dispatch and refuses missing entries instead of accepting
+repository or organization fallback. `--env Prod`, `--env Production` and other
+environment names are rejected; the handoff job is also fixed to `Preview`.
 
 ```sh
-ghenv run --repo OWNER/REPO --env development \
+ghenv run --repo OWNER/REPO --env Preview \
   --secrets DATABASE_URL,API_KEY --vars API_BASE_URL \
   --timeout 10m -- npm run dev
 ```
@@ -68,8 +69,9 @@ This is a first demo for GitHub.com and POSIX development machines. It is not a
 GitHub-supported secret retrieval feature. Actions jobs can access secrets, while
 the secrets REST API cannot read their values. This workflow deliberately makes
 requested values available to developers who can dispatch it and obtain approval
-for its environment. Use development credentials and environment protection rules.
-Anyone trusted to modify the workflow or the code it builds can change what it
+for its environment. Use development credentials and environment protection
+rules. An environment name does not prove that a credential is a test credential;
+put only test keys in Preview. Anyone trusted to modify the workflow or the code it builds can change what it
 exports. Review those changes as you would any other workflow that handles secrets.
 
 The initial handoff workflow builds Go code from its own repository. To use a
@@ -79,9 +81,28 @@ untrusted application code in a job that exports secrets. The CLI's `--repo`
 always identifies the repository holding the secrets and workflow. `--ref`
 defaults to `main` and must identify a trusted workflow revision.
 
-The launched application and its descendants can read, print or persist their
-environment. Values still exist in process memory; Go does not guarantee their
-complete erasure. Do not use shell tracing or commands that print secrets.
+**This does not hide secrets from the person running the command.** The launched
+application, its descendants, the local account and a machine administrator can
+inspect, print or persist their environment. A developer who controls the app can
+add code that prints any injected secret. If developers must never access a key,
+keep it in a remote backend and give local development a limited API instead.
+Browser-facing variables (for example `EXPO_PUBLIC_*`) remain public. Values
+still exist in process memory; Go does not guarantee their complete erasure.
+Do not use shell tracing or commands that print secrets.
+
+## Replacing existing dotenv files
+
+Environment injection can replace scalar values in dotenv files when the app
+reads its process environment. Define the required values in Preview and map
+their names to those the app expects. A public client setting can require a
+framework prefix such as `EXPO_PUBLIC_`; never add that prefix to a private key.
+
+Check the launch command before removing files: dotenv loaders that override
+the inherited environment, shell scripts that source `.env`, Docker Compose
+`env_file` entries, and tools that read credential files need an adapter or a
+configuration change. For Expo trials, set `EXPO_NO_DOTENV=1` to prevent loading
+old files. Locally generated database credentials and ports also need a local
+configuration source. The CLI does not delete or rewrite existing dotenv files.
 
 ## Development
 

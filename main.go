@@ -23,7 +23,7 @@ Usage:
 
 Options (before --):
   --repo       GitHub repository containing the ghenv.yml workflow (required)
-  --env        GitHub environment (default: development)
+  --env        GitHub environment (only Preview is permitted)
   --ref        Trusted workflow Git ref (default: main)
   --secrets    Comma-separated secret names to inject
   --vars       Comma-separated variable names to inject
@@ -45,7 +45,7 @@ func parseOptions(args []string) (options, error) {
 	var o options
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
 	fs.StringVar(&o.Repo, "repo", "", "GitHub OWNER/REPO")
-	fs.StringVar(&o.Environment, "env", "development", "GitHub environment")
+	fs.StringVar(&o.Environment, "env", "Preview", "GitHub environment (Preview only)")
 	fs.StringVar(&o.Ref, "ref", "main", "trusted workflow Git ref")
 	fs.StringVar(&o.Secrets, "secrets", "", "comma-separated secret names")
 	fs.StringVar(&o.Variables, "vars", "", "comma-separated variable names")
@@ -64,8 +64,11 @@ func parseOptions(args []string) (options, error) {
 	if !repoName.MatchString(o.Repo) || repo == "." || repo == ".." {
 		return o, errors.New("--repo must be OWNER/REPO")
 	}
-	if o.Environment == "" || o.Ref == "" || o.Timeout <= 0 {
-		return o, errors.New("environment, ref and a positive timeout are required")
+	if o.Environment != "Preview" {
+		return o, errors.New("local runs only support the Preview environment; production is refused")
+	}
+	if o.Ref == "" || o.Timeout <= 0 {
+		return o, errors.New("ref and a positive timeout are required")
 	}
 	if _, err := requestedNames(o.Secrets, o.Variables); err != nil {
 		return o, err
