@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -128,11 +127,11 @@ func selectValues(secrets, variables map[string]string, secretNames, variableNam
 }
 
 func sealFromEnvironment() error {
-	var secrets, variables map[string]string
-	if json.Unmarshal([]byte(os.Getenv("GHENV_SECRETS_JSON")), &secrets) != nil || json.Unmarshal([]byte(os.Getenv("GHENV_VARS_JSON")), &variables) != nil {
-		return errors.New("invalid workflow environment JSON")
+	bundle, err := parsePreviewBundle([]byte(os.Getenv("GHENV_PREVIEW_BUNDLE")), os.Getenv("GITHUB_REPOSITORY"))
+	if err != nil {
+		return err
 	}
-	values, err := selectValues(secrets, variables, os.Getenv("GHENV_SECRET_NAMES"), os.Getenv("GHENV_VAR_NAMES"))
+	values, err := selectValues(bundle.Secrets, bundle.Variables, os.Getenv("GHENV_SECRET_NAMES"), os.Getenv("GHENV_VAR_NAMES"))
 	if err != nil {
 		return err
 	}
@@ -160,31 +159,6 @@ func commandEnvironment(base []string, values map[string]string) []string {
 		result = append(result, name+"="+value)
 	}
 	return result
-}
-
-func launch(args []string, values map[string]string) error {
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Env = commandEnvironment(os.Environ(), values)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	signals := make(chan os.Signal, 2)
-	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
-	defer signal.Stop(signals)
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	done := make(chan struct{})
-	defer close(done)
-	go func() {
-		for {
-			select {
-			case sig := <-signals:
-				_ = cmd.Process.Signal(sig)
-			case <-done:
-				return
-			}
-		}
-	}()
-	return cmd.Wait()
 }
 
 func main() {
