@@ -14,10 +14,12 @@ GitHub.com repository with Actions enabled. Authenticate with `gh auth login`.
 A fine-grained token needs Actions read/write for dispatch and artifact cleanup.
 Environment approval and branch restrictions still apply.
 
-Install `.github/workflows/ghenv.yml` in the repository holding your Preview
-configuration. In another repository, change its checkout step to build a
-reviewed, immutable commit of `nicodes/ghenv`, rather than application code.
-For the normal setup, install the workflow on the default branch. `--ref`
+For a project repository, use the small dispatch workflow from
+[`ghenv-actions`](https://github.com/nicodes/ghenv-actions), pinned to a reviewed
+full action commit. It builds the reviewed exporter, handles encrypted artifact
+upload, and cleans temporary files without checking out application code.
+The workflow in this CLI repository is the standalone implementation for CLI
+development. For the normal setup, install the workflow on the default branch. `--ref`
 defaults to `main` and must identify a trusted workflow revision.
 
 Create a GitHub environment named **`Preview`**. Its owner must curate a single
