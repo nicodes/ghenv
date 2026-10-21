@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io"
 	"strings"
 )
 
@@ -29,12 +28,36 @@ func parsePreviewBundle(data []byte, repository string) (previewBundle, error) {
 	if err := uniqueJSON(json.NewDecoder(bytes.NewReader(data)), 0); err != nil {
 		return bundle, invalid
 	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&bundle); err != nil {
+	// Check exact field names before Go's case-insensitive struct matching.
+	// In particular, Unicode aliases such as "ſecrets" must not merge maps.
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(data, &fields) != nil || len(fields) != 5 {
 		return previewBundle{}, invalid
 	}
-	if decoder.Decode(new(any)) != io.EOF {
+	for name := range fields {
+		switch name {
+		case "version", "environment", "repository", "secrets", "variables":
+		default:
+			return previewBundle{}, invalid
+		}
+	}
+	for _, name := range []string{"secrets", "variables"} {
+		object := bytes.TrimSpace(fields[name])
+		if len(object) == 0 || object[0] != '{' {
+			return previewBundle{}, invalid
+		}
+		var entries map[string]json.RawMessage
+		if json.Unmarshal(object, &entries) != nil {
+			return previewBundle{}, invalid
+		}
+		for _, value := range entries {
+			value = bytes.TrimSpace(value)
+			if len(value) == 0 || value[0] != '"' {
+				return previewBundle{}, invalid
+			}
+		}
+	}
+	if json.Unmarshal(data, &bundle) != nil {
 		return previewBundle{}, invalid
 	}
 	if bundle.Version != 1 || bundle.Environment != "Preview" || bundle.Repository != repository {

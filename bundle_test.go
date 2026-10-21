@@ -28,6 +28,15 @@ func TestBundleScope(t *testing.T) {
 		strings.Replace(testBundle, `"TOKEN"`, `"INVALID-NAME"`, 1),
 		strings.Replace(testBundle, `"synthetic secret"`, `"bad\u0000value"`, 1),
 		strings.Replace(testBundle, `"synthetic secret"`, `42`, 1),
+		strings.Replace(testBundle, `"synthetic secret"`, `null`, 1),
+		strings.Replace(testBundle, `"http://localhost"`, `null`, 1),
+		strings.Replace(testBundle, `"secrets":{"TOKEN":"synthetic secret"}`, `"secrets":null`, 1),
+		strings.Replace(testBundle, `"variables":{"URL":"http://localhost"}`, `"variables":null`, 1),
+		strings.Replace(testBundle, `"secrets"`, `"ſecrets"`, 1),
+		strings.Replace(testBundle, `"repository"`, `"repoſitory"`, 1),
+		strings.Replace(testBundle, `"version":1`, `"Version":1`, 1),
+		strings.Replace(testBundle, `"secrets":`, `"ſecrets":{"EXTRA":"sentinel"},"secrets":`, 1),
+		strings.Replace(testBundle, `,"variables":{"URL":"http://localhost"}`, ``, 1),
 		strings.Repeat(" ", maxBundle+1),
 	} {
 		if _, err := parsePreviewBundle([]byte(data), "owner/repo"); err == nil {
@@ -46,6 +55,8 @@ func TestDirectSealCannotExportSurroundingSecrets(t *testing.T) {
 		{"outside-bundle", testBundle, "PROD_ONLY"},
 		{"production-bundle-fallback", strings.Replace(testBundle, `"Preview"`, `"Production"`, 1), "TOKEN"},
 		{"foreign-repository", strings.Replace(testBundle, `"owner/repo"`, `"owner/other"`, 1), "TOKEN"},
+		{"null-value", strings.Replace(testBundle, `"synthetic secret"`, `null`, 1), "TOKEN"},
+		{"unicode-alias", strings.Replace(testBundle, `"secrets":`, `"ſecrets":{"PROD_ONLY":"sentinel"},"secrets":`, 1), "PROD_ONLY"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cmd := exec.Command(os.Args[0], "-test.run=^TestSealHelper$")
