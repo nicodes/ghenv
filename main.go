@@ -19,6 +19,7 @@ const usage = `ghenv: run a local command with GitHub Actions secrets and variab
 
 Usage:
   ghenv run --repo OWNER/REPO --secrets NAME,OTHER --vars NAME -- COMMAND [ARG...]
+  ghenv local -- COMMAND [ARG...]  (clean, credential-free; no GitHub request)
 
 Options (before --):
   --repo       GitHub repository containing the ghenv.yml workflow (required)
@@ -171,6 +172,12 @@ func main() {
 	}
 	var err error
 	switch os.Args[1] {
+	case "local":
+		if len(os.Args) < 4 || os.Args[2] != "--" {
+			err = errors.New("usage: ghenv local -- COMMAND [ARG...]")
+		} else {
+			err = launchEnvironment(os.Args[3:], developmentEnvironment(os.Environ(), nil), shutdownGrace)
+		}
 	case "seal":
 		err = sealFromEnvironment()
 	case "run":
