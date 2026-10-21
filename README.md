@@ -175,8 +175,8 @@ handoff. Only the selected Preview values reach the application. Expo dotenv
 loading is disabled with `EXPO_NO_DOTENV=1`. Other dotenv readers must be removed
 from the application's local launch commands so they cannot override the handoff.
 Pass local ports and other nonsecret options as command arguments. Do not request
-production database URLs or deploy keys. Credential-free workflows can invoke
-their existing local supervisor directly without an Actions round trip.
+production database URLs or deploy keys. Credential-free workflows can use `ghenv local -- make product-dev` to apply
+the same environment isolation without GitHub authentication or an Actions round trip.
 
 To reuse existing individual Preview secrets and variables, see the explicit
 allowlist example in [ghenv-actions](https://github.com/nicodes/ghenv-actions).

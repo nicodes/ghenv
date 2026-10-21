@@ -39,3 +39,31 @@ func TestCleanLaunch(t *testing.T) {
 		t.Fatal("parent authentication changed")
 	}
 }
+
+func TestOfflineCLI(t *testing.T) {
+	if os.Getenv("GHENV_OFFLINE_HELPER") == "yes" {
+		os.Args = []string{"ghenv", "local", "--", os.Args[0], "-test.run=^TestOfflineChild$", "--", "ghenv-offline-child"}
+		main()
+		os.Exit(0)
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^TestOfflineCLI$")
+	cmd.Env = commandEnvironment(os.Environ(), map[string]string{"GHENV_OFFLINE_HELPER": "yes", "GH_TOKEN": "parent-only", "OPENAI_API_KEY": "must-not-reach-app", "PATH": "/no-gh-command"})
+	output, err := cmd.CombinedOutput()
+	var status *exec.ExitError
+	if !errors.As(err, &status) || status.ExitCode() != 23 {
+		t.Fatalf("offline CLI failed: %v\n%s", err, output)
+	}
+}
+
+func TestOfflineChild(t *testing.T) {
+	if !slices.Contains(os.Args, "ghenv-offline-child") {
+		return
+	}
+	if os.Getenv("EXPO_NO_DOTENV") != "1" {
+		os.Exit(9)
+	}
+	if os.Getenv("GH_TOKEN") != "" || os.Getenv("OPENAI_API_KEY") != "" {
+		os.Exit(9)
+	}
+	os.Exit(23)
+}
