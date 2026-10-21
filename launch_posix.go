@@ -19,8 +19,12 @@ func launch(args []string, values map[string]string) error {
 }
 
 func launchWithGrace(args []string, values map[string]string, grace time.Duration) error {
+	return launchEnvironment(args, commandEnvironment(os.Environ(), values), grace)
+}
+
+func launchEnvironment(args []string, environment []string, grace time.Duration) error {
 	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Env = commandEnvironment(os.Environ(), values)
+	cmd.Env = environment
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	// Give an interactive child the foreground terminal, then restore it before

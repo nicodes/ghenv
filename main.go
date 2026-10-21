@@ -19,6 +19,7 @@ const usage = `ghenv: run a local command with GitHub Actions secrets and variab
 
 Usage:
   ghenv run --repo OWNER/REPO --secrets NAME,OTHER --vars NAME -- COMMAND [ARG...]
+  ghenv local -- COMMAND [ARG...]  (clean, credential-free; no GitHub request)
 
 Options (before --):
   --repo       GitHub repository containing the ghenv.yml workflow (required)
@@ -27,6 +28,7 @@ Options (before --):
   --secrets    Comma-separated secret names to inject
   --vars       Comma-separated variable names to inject
   --timeout    Maximum time to wait for Actions (default: 5m)
+  --clean-env  Inherit only terminal/tool paths, then inject requested values
 
 Requires gh auth login and Actions write access. No .env files are written.
 `
@@ -38,6 +40,7 @@ type options struct {
 	Repo, Environment, Ref, Secrets, Variables string
 	Timeout                                    time.Duration
 	Command                                    []string
+	CleanEnvironment                           bool
 }
 
 func parseOptions(args []string) (options, error) {
@@ -49,6 +52,7 @@ func parseOptions(args []string) (options, error) {
 	fs.StringVar(&o.Secrets, "secrets", "", "comma-separated secret names")
 	fs.StringVar(&o.Variables, "vars", "", "comma-separated variable names")
 	fs.DurationVar(&o.Timeout, "timeout", 5*time.Minute, "workflow timeout")
+	fs.BoolVar(&o.CleanEnvironment, "clean-env", false, "isolate child credentials from the parent environment")
 	separator := slices.Index(args, "--")
 	if separator < 0 || separator == len(args)-1 {
 		return o, errors.New("specify a command after --")
@@ -168,6 +172,12 @@ func main() {
 	}
 	var err error
 	switch os.Args[1] {
+	case "local":
+		if len(os.Args) < 4 || os.Args[2] != "--" {
+			err = errors.New("usage: ghenv local -- COMMAND [ARG...]")
+		} else {
+			err = launchEnvironment(os.Args[3:], developmentEnvironment(os.Environ(), nil), shutdownGrace)
+		}
 	case "seal":
 		err = sealFromEnvironment()
 	case "run":
@@ -181,7 +191,11 @@ func main() {
 			cancel()
 			stop()
 			if err == nil {
-				err = launch(o.Command, values)
+				if o.CleanEnvironment {
+					err = launchEnvironment(o.Command, developmentEnvironment(os.Environ(), values), shutdownGrace)
+				} else {
+					err = launch(o.Command, values)
+				}
 			}
 		}
 	default:

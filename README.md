@@ -151,3 +151,33 @@ exit status, and cleanup of descendants that ignore SIGTERM. Linux and macOS
 process tests also cover a wrapper that exits before its descendant, foreground
 terminal input/restoration, and terminal Ctrl-C cleanup. No live credentials
 are needed for these checks.
+
+## Local development launchers
+
+Pin a released CLI in your tool manifest, for example:
+
+```toml
+[tools]
+"go:github.com/nicodes/ghenv" = "0.1.0"
+```
+
+Wrap the existing development supervisor once per session:
+
+```sh
+ghenv run --clean-env --repo OWNER/PROJECT --secrets API_KEY --vars PUBLIC_KEY -- make product-dev
+```
+
+`--clean-env` keeps terminal settings, executable/tool/cache paths and the SSH
+agent socket. It drops other inherited variables, including GitHub tokens,
+remote database URLs, provider keys, shell startup hooks and Make overrides.
+GitHub authentication still uses the original parent environment during the
+handoff. Only the selected Preview values reach the application. Expo dotenv
+loading is disabled with `EXPO_NO_DOTENV=1`. Other dotenv readers must be removed
+from the application's local launch commands so they cannot override the handoff.
+Pass local ports and other nonsecret options as command arguments. Do not request
+production database URLs or deploy keys. Credential-free workflows can use `ghenv local -- make product-dev` to apply
+the same environment isolation without GitHub authentication or an Actions round trip.
+
+To reuse existing individual Preview secrets and variables, see the explicit
+allowlist example in [ghenv-actions](https://github.com/nicodes/ghenv-actions).
+The caller constructs the bundle in memory; no duplicate secret needs provisioning.
