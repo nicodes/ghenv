@@ -18,6 +18,7 @@ import (
 const usage = `ghenv: run a local command with GitHub Actions secrets and variables.
 
 Usage:
+  ghenv dev [--mode auto|preview|local] [--config ghenv.json] -- COMMAND [ARG...]
   ghenv run --repo OWNER/REPO --secrets NAME,OTHER --vars NAME -- COMMAND [ARG...]
   ghenv local -- COMMAND [ARG...]  (clean, credential-free; no GitHub request)
 
@@ -172,6 +173,8 @@ func main() {
 	}
 	var err error
 	switch os.Args[1] {
+	case "dev":
+		err = runDevelopment(os.Args[2:])
 	case "local":
 		if len(os.Args) < 4 || os.Args[2] != "--" {
 			err = errors.New("usage: ghenv local -- COMMAND [ARG...]")

@@ -1,3 +1,5 @@
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 12af34dde7f8777ce4a4d9450861b6a6a686e4fc0de8825fa829ef8d1fc79cf9 -->
+
 # ghenv
 
 Run a local command with an explicitly approved set of GitHub-hosted Preview
@@ -152,13 +154,60 @@ process tests also cover a wrapper that exits before its descendant, foreground
 terminal input/restoration, and terminal Ctrl-C cleanup. No live credentials
 are needed for these checks.
 
+## Project development runner
+
+A project can commit a public `ghenv.json` containing credential **names** and
+launch policy. Keep credential values in GitHub Preview. For example:
+
+```json
+{
+  "version": 1,
+  "repository": "OWNER/PROJECT",
+  "default_mode": "preview",
+  "secrets": "API_KEY",
+  "variables": "API_BASE_URL",
+  "prefixes": {"API_KEY": "test_"},
+  "aliases": {"APP_PUBLIC_API_URL": "API_BASE_URL"},
+  "environment": {"BUN_OPTIONS": "--no-env-file"}
+}
+```
+
+```sh
+ghenv dev -- npm run dev
+ghenv dev --mode local -- npm run dev
+```
+
+`auto`, the default mode, follows the profile's `default_mode` (`preview` or
+`local`). Use `preview` where the application consumes Preview credentials;
+use `local` for a fixture stack that does not. `--mode local` always skips the
+GitHub handoff. A profile with no selected secrets or variables starts the same
+clean child in either mode without contacting GitHub.
+
+The runner reads `ghenv.json` from the current directory; `--config PATH`
+selects another profile. `--timeout` bounds the handoff and defaults to five
+minutes. Invalid profiles or failed Preview requests stop startup; they do not
+fall back to another mode.
+
+`prefixes` checks selected values before starting the child and reports only
+entry names on failure. `aliases` maps a new environment name to a selected
+entry. An alias must be appropriate for its destination: browser-facing values
+must come from public entries. `environment` holds fixed **nonsecret** settings.
+Aliases and fixed entries cannot overwrite selected names. Unknown fields,
+duplicate JSON keys, invalid identifiers and unsupported modes are refused.
+The existing clean environment, dotenv boundary, interactive terminal handling,
+exit status and process-group cleanup also apply to `dev`.
+
+Applications can keep a tiny adapter around this command so `make dev` uses the
+profile and `make dev DEV_ENV=local` provides the common offline override.
+Existing `run` and `local` commands remain available for explicit commands.
+
 ## Local development launchers
 
 Pin a released CLI in your tool manifest, for example:
 
 ```toml
 [tools]
-"go:github.com/nicodes/ghenv" = "0.1.0"
+"go:github.com/nicodes/ghenv" = "0.2.0"
 ```
 
 Wrap the existing development supervisor once per session:
