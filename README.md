@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: c8bbe6fd84aad10a939addfc3b06d96193374b44e5f4aa043d09f609ff78d82c -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: bd17fa0f01abdf03c761a93e00286d43da1324f0a1f953631a308ba66551efa2 -->
 
 # ghenv
 
@@ -243,4 +243,4 @@ The profile uses the version 1 project fields above. `Prepare` returns an isolat
 
 ## Repository development
 
-Install the [Komizo release](https://github.com/nicodes/komizo#install) matching `komizo.lock`, then run `komizo check`. The same gate runs on Linux and macOS in CI.
+Install the [komizo release](https://github.com/nicodes/komizo#install) matching `komizo.lock`, then run `komizo check`. The same gate runs on Linux and macOS in CI.
