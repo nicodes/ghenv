@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 12af34dde7f8777ce4a4d9450861b6a6a686e4fc0de8825fa829ef8d1fc79cf9 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: c8bbe6fd84aad10a939addfc3b06d96193374b44e5f4aa043d09f609ff78d82c -->
 
 # ghenv
 
@@ -197,9 +197,9 @@ duplicate JSON keys, invalid identifiers and unsupported modes are refused.
 The existing clean environment, dotenv boundary, interactive terminal handling,
 exit status and process-group cleanup also apply to `dev`.
 
-Applications can keep a tiny adapter around this command so `make dev` uses the
-profile and `make dev DEV_ENV=local` provides the common offline override.
-Existing `run` and `local` commands remain available for explicit commands.
+Fleet projects use `komizo dev` with the `development` policy in `komizo.json`.
+`komizo dev --mode local` selects the offline mode. The standalone `run`, `dev`
+and `local` commands are available for other explicitly selected commands.
 
 ## Local development launchers
 
@@ -230,3 +230,17 @@ the same environment isolation without GitHub authentication or an Actions round
 To reuse existing individual Preview secrets and variables, see the explicit
 allowlist example in [ghenv-actions](https://github.com/nicodes/ghenv-actions).
 The caller constructs the bundle in memory; no duplicate secret needs provisioning.
+
+## Go provider
+
+Import `github.com/nicodes/ghenv/provider` to reuse the credential handoff without launching a process.
+
+```go
+environment, err := provider.Prepare(ctx, "profile.json", "auto", os.Environ())
+```
+
+The profile uses the version 1 project fields above. `Prepare` returns an isolated child environment. `Fetch` accepts an explicit `provider.Request`; `SealBundle` implements the workflow export boundary. No plaintext credential file is created.
+
+## Repository development
+
+Install the [Komizo release](https://github.com/nicodes/komizo#install) matching `komizo.lock`, then run `komizo check`. The same gate runs on Linux and macOS in CI.

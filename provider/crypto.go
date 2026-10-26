@@ -1,4 +1,4 @@
-package main
+package provider
 
 import (
 	"crypto/aes"
@@ -23,7 +23,7 @@ type envelope struct {
 	Ciphertext []byte `json:"ciphertext"`
 }
 
-func seal(publicKey string, values map[string]string, requestID string) ([]byte, error) {
+func Seal(publicKey string, values map[string]string, requestID string) ([]byte, error) {
 	der, err := base64.StdEncoding.DecodeString(publicKey)
 	if err != nil {
 		return nil, errors.New("invalid public key encoding")
@@ -68,7 +68,7 @@ func seal(publicKey string, values map[string]string, requestID string) ([]byte,
 	return json.Marshal(envelope{protocol, wrapped, nonce, gcm.Seal(nil, nonce, plaintext, []byte(requestID))})
 }
 
-func unseal(privateKey *rsa.PrivateKey, data []byte, requestID string) (map[string]string, error) {
+func Unseal(privateKey *rsa.PrivateKey, data []byte, requestID string) (map[string]string, error) {
 	var e envelope
 	if len(data) > maxPayload*2 {
 		return nil, errors.New("encrypted payload is too large")

@@ -5,10 +5,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/nicodes/ghenv/provider"
 	"os"
 	"os/exec"
 	"os/signal"
-	"regexp"
 	"slices"
 	"strings"
 	"syscall"
@@ -33,9 +33,6 @@ Options (before --):
 
 Requires gh auth login and Actions write access. No .env files are written.
 `
-
-var envName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
-var repoName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_.-]+$`)
 
 type options struct {
 	Repo, Environment, Ref, Secrets, Variables string
@@ -64,87 +61,19 @@ func parseOptions(args []string) (options, error) {
 	if fs.NArg() != 0 {
 		return o, errors.New("unexpected argument before --")
 	}
-	_, repo, _ := strings.Cut(o.Repo, "/")
-	if !repoName.MatchString(o.Repo) || repo == "." || repo == ".." {
-		return o, errors.New("--repo must be OWNER/REPO")
+	if o.Timeout <= 0 {
+		return o, errors.New("a positive timeout is required")
 	}
-	if o.Environment != "Preview" {
-		return o, errors.New("local runs only support the Preview environment; production is refused")
-	}
-	if o.Ref == "" || o.Timeout <= 0 {
-		return o, errors.New("ref and a positive timeout are required")
-	}
-	if _, err := requestedNames(o.Secrets, o.Variables); err != nil {
+	if err := (provider.Request{Repo: o.Repo, Environment: o.Environment, Ref: o.Ref, Secrets: o.Secrets, Variables: o.Variables}).Validate(); err != nil {
 		return o, err
 	}
+
 	o.Command = args[separator+1:]
 	return o, nil
 }
 
-func requestedNames(secrets, variables string) ([]string, error) {
-	var result []string
-	for _, group := range []string{secrets, variables} {
-		if group == "" {
-			continue
-		}
-		for _, name := range strings.Split(group, ",") {
-			if !envName.MatchString(name) || strings.EqualFold(name, "GITHUB_TOKEN") {
-				return nil, errors.New("names must be environment variable identifiers; GITHUB_TOKEN cannot be exported")
-			}
-			if slices.Contains(result, name) {
-				return nil, fmt.Errorf("duplicate name %s", name)
-			}
-			result = append(result, name)
-		}
-	}
-	if len(result) == 0 {
-		return nil, errors.New("request at least one name with --secrets or --vars")
-	}
-	return result, nil
-}
-
-func selectValues(secrets, variables map[string]string, secretNames, variableNames string) (map[string]string, error) {
-	names, err := requestedNames(secretNames, variableNames)
-	if err != nil {
-		return nil, err
-	}
-	result := make(map[string]string, len(names))
-	for i, group := range []string{secretNames, variableNames} {
-		if group == "" {
-			continue
-		}
-		source := secrets
-		if i == 1 {
-			source = variables
-		}
-		for _, name := range strings.Split(group, ",") {
-			value, ok := source[name]
-			if !ok {
-				return nil, fmt.Errorf("requested name %s is unavailable in this workflow environment", name)
-			}
-			if strings.ContainsRune(value, 0) {
-				return nil, fmt.Errorf("%s contains a NUL byte and cannot be an environment value", name)
-			}
-			result[name] = value
-		}
-	}
-	return result, nil
-}
-
 func sealFromEnvironment() error {
-	bundle, err := parsePreviewBundle([]byte(os.Getenv("GHENV_PREVIEW_BUNDLE")), os.Getenv("GITHUB_REPOSITORY"))
-	if err != nil {
-		return err
-	}
-	values, err := selectValues(bundle.Secrets, bundle.Variables, os.Getenv("GHENV_SECRET_NAMES"), os.Getenv("GHENV_VAR_NAMES"))
-	if err != nil {
-		return err
-	}
-	requestID := os.Getenv("GHENV_REQUEST_ID")
-	if !requestName.MatchString(requestID) {
-		return errors.New("invalid request ID")
-	}
-	data, err := seal(os.Getenv("GHENV_PUBLIC_KEY"), values, requestID)
+	data, err := provider.SealBundle([]byte(os.Getenv("GHENV_PREVIEW_BUNDLE")), os.Getenv("GITHUB_REPOSITORY"), os.Getenv("GHENV_SECRET_NAMES"), os.Getenv("GHENV_VAR_NAMES"), os.Getenv("GHENV_PUBLIC_KEY"), os.Getenv("GHENV_REQUEST_ID"))
 	if err != nil {
 		return err
 	}
@@ -190,7 +119,7 @@ func main() {
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 			ctx, cancel := context.WithTimeout(ctx, o.Timeout)
 			var values map[string]string
-			values, err = fetchEnvironment(ctx, ghAPI, o)
+			values, err = provider.Fetch(ctx, provider.Request{Repo: o.Repo, Environment: o.Environment, Ref: o.Ref, Secrets: o.Secrets, Variables: o.Variables})
 			cancel()
 			stop()
 			if err == nil {
