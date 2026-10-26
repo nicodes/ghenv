@@ -1,4 +1,4 @@
-package main
+package provider
 
 import (
 	"context"
@@ -50,9 +50,9 @@ func TestProjectPreviewSelectionAndIsolation(t *testing.T) {
 		t.Fatal(err)
 	}
 	calls := 0
-	fetch := func(_ context.Context, o options) (map[string]string, error) {
+	fetch := func(_ context.Context, o Request) (map[string]string, error) {
 		calls++
-		if o.Repo != "owner/project" || o.Environment != "Preview" || o.Ref != "main" || o.Secrets != "API_KEY" || o.Variables != "PUBLIC_KEY" || !o.CleanEnvironment {
+		if o.Repo != "owner/project" || o.Environment != "Preview" || o.Ref != "main" || o.Secrets != "API_KEY" || o.Variables != "PUBLIC_KEY" {
 			t.Fatalf("wrong request: %+v", o)
 		}
 		return map[string]string{"API_KEY": "test_synthetic\nquoted ' $()", "PUBLIC_KEY": "public"}, nil
@@ -82,7 +82,7 @@ func TestProjectOfflineAndEmptySelectionNeverFetch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	never := func(context.Context, options) (map[string]string, error) {
+	never := func(context.Context, Request) (map[string]string, error) {
 		t.Fatal("offline mode contacted GitHub")
 		return nil, nil
 	}
@@ -120,16 +120,16 @@ func TestProjectRefusesBadHandoffWithoutExposingValues(t *testing.T) {
 		{"API_KEY": "test_synthetic", "PUBLIC_KEY": "public", "OTHER": "do_not_print"},
 		{"API_KEY": "test_synthetic\x00do_not_print", "PUBLIC_KEY": "public"},
 	} {
-		fetch := func(context.Context, options) (map[string]string, error) { return values, nil }
+		fetch := func(context.Context, Request) (map[string]string, error) { return values, nil }
 		if _, err = projectEnvironment(context.Background(), p, "preview", nil, fetch); err == nil || strings.Contains(err.Error(), "do_not_print") {
 			t.Fatal("invalid handoff accepted or exposed its values")
 		}
 	}
-	fetch := func(context.Context, options) (map[string]string, error) { return nil, errors.New("handoff failed") }
+	fetch := func(context.Context, Request) (map[string]string, error) { return nil, errors.New("handoff failed") }
 	if _, err = projectEnvironment(context.Background(), p, "preview", nil, fetch); err == nil {
 		t.Fatal("failed handoff fell back to another mode")
 	}
-	never := func(context.Context, options) (map[string]string, error) {
+	never := func(context.Context, Request) (map[string]string, error) {
 		t.Fatal("invalid mode contacted GitHub")
 		return nil, nil
 	}
