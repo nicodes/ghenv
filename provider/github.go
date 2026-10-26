@@ -1,4 +1,4 @@
-package main
+package provider
 
 import (
 	"archive/zip"
@@ -61,7 +61,7 @@ func ghAPI(ctx context.Context, method, path string, body any) ([]byte, error) {
 	return output.buffer.Bytes(), nil
 }
 
-func fetchEnvironment(ctx context.Context, api apiFunc, o options) (map[string]string, error) {
+func fetchEnvironment(ctx context.Context, api apiFunc, o Request) (map[string]string, error) {
 	names, err := requestedNames(o.Secrets, o.Variables)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func fetchEnvironment(ctx context.Context, api apiFunc, o options) (map[string]s
 		ID int64 `json:"workflow_run_id"`
 	}
 	if json.Unmarshal(data, &dispatch) != nil || dispatch.ID == 0 {
-		return nil, errors.New("GitHub did not return a workflow run ID; this demo requires github.com with workflow dispatch run details")
+		return nil, errors.New("GitHub did not return a workflow run ID; github.com workflow dispatch run details are required")
 	}
 	runPath := fmt.Sprintf("%s/runs/%d", prefix, dispatch.ID)
 	fmt.Fprintf(os.Stderr, "ghenv: waiting for https://github.com/%s/actions/runs/%d\n", o.Repo, dispatch.ID)
@@ -165,7 +165,7 @@ func fetchEnvironment(ctx context.Context, api apiFunc, o options) (map[string]s
 	if err != nil {
 		return nil, err
 	}
-	values, err := unseal(privateKey, payload, requestID)
+	values, err := Unseal(privateKey, payload, requestID)
 	if err != nil {
 		return nil, err
 	}
