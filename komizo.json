@@ -4,7 +4,7 @@
   "repository": "nicodes/ghenv",
   "stages": {
     "dev": {
-      "inapplicable": "Use the standalone CLI for caller-owned commands; Komizo owns fleet development sessions"
+      "inapplicable": "Use the standalone CLI for caller-owned commands; komizo owns fleet development sessions"
     }
   },
   "validation": {
