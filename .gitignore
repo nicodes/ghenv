@@ -1,2 +1,8 @@
 /ghenv
 /.env*
+
+.artifacts/
+
+.komizo.mise*.toml
+
+.komizo.mise*.lock

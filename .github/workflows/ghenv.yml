@@ -1,4 +1,4 @@
-name: ghenv encrypted handoff
+name: Local Environment
 run-name: ghenv ${{ inputs.request_id }}
 
 on:
