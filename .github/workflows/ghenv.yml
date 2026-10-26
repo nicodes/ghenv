@@ -28,6 +28,7 @@ permissions:
 
 jobs:
   handoff:
+    name: "Handoff"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: Preview
@@ -36,10 +37,12 @@ jobs:
         env:
           REQUESTED_ENVIRONMENT: ${{ inputs.environment }}
         run: test "$REQUESTED_ENVIRONMENT" = Preview
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: "Check out source"
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - name: "Set up Go"
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: '1.27.3'
           cache: false
@@ -53,7 +56,8 @@ jobs:
           GHENV_PUBLIC_KEY: ${{ inputs.public_key }}
           GHENV_REQUEST_ID: ${{ inputs.request_id }}
         run: '"$RUNNER_TEMP/ghenv" seal > "$RUNNER_TEMP/payload.json"'
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - name: "Upload artifacts"
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ghenv-${{ inputs.request_id }}
           path: ${{ runner.temp }}/payload.json

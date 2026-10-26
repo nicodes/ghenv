@@ -11,7 +11,8 @@
     "workflow": {
       "required": [
         "ci.yml",
-        "ghenv.yml"
+        "ghenv.yml",
+        "dependency-policy.yml"
       ],
       "ci_gates": [
         "Test",
