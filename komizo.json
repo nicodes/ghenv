@@ -12,7 +12,8 @@
       "required": [
         "ci.yml",
         "ghenv.yml",
-        "dependency-policy.yml"
+        "dependency-policy.yml",
+        "release.yml"
       ],
       "ci_gates": [
         "Test",
