@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: bd17fa0f01abdf03c761a93e00286d43da1324f0a1f953631a308ba66551efa2 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: ba54d0561de20ca95f0287fd700597a9c57a12e0885ceadcb59834d74066cf87 -->
 
 # ghenv
 
@@ -10,6 +10,8 @@ ghenv run --repo OWNER/REPO --secrets API_KEY --vars API_BASE_URL -- npm run dev
 ```
 
 ## Setup
+
+The install command below builds the Go module and installs to `~/.local/bin`. Add that directory to your PATH if necessary.
 
 Requires Go 1.24+, [GitHub CLI](https://cli.github.com/), Linux or macOS, and a
 GitHub.com repository with Actions enabled. Authenticate with `gh auth login`.
@@ -48,7 +50,7 @@ per-secret limit.
 
 ```sh
 gh secret set GHENV_PREVIEW_BUNDLE --repo OWNER/REPO --env Preview
-go install github.com/nicodes/ghenv@latest
+curl -fsSL https://ghenv.dev/install | sh
 ghenv run --repo OWNER/REPO --secrets API_KEY --vars API_BASE_URL -- npm run dev
 ```
 
