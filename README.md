@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: ba54d0561de20ca95f0287fd700597a9c57a12e0885ceadcb59834d74066cf87 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 666d7954dff4fb88fb5bf5bfcd7642e94bb8aaa3b241c0a2f2f7561456f717c5 -->
 
 # ghenv
 
@@ -11,9 +11,9 @@ ghenv run --repo OWNER/REPO --secrets API_KEY --vars API_BASE_URL -- npm run dev
 
 ## Setup
 
-The install command below builds the Go module and installs to `~/.local/bin`. Add that directory to your PATH if necessary.
+The install command below downloads and verifies a prebuilt binary into `~/.local/bin`. A Go compiler is not required. Add that directory to your PATH if necessary.
 
-Requires Go 1.24+, [GitHub CLI](https://cli.github.com/), Linux or macOS, and a
+Requires [GitHub CLI](https://cli.github.com/), Linux or macOS (x86_64 or arm64), and a
 GitHub.com repository with Actions enabled. Authenticate with `gh auth login`.
 A fine-grained token needs Actions read/write for dispatch and artifact cleanup.
 Environment approval and branch restrictions still apply.
