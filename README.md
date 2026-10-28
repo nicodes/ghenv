@@ -1,9 +1,9 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 666d7954dff4fb88fb5bf5bfcd7642e94bb8aaa3b241c0a2f2f7561456f717c5 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 98e9a7dc76f8a478ed31fc5ad4d4d2e8f719c5b1da2a439fd2ca23c820e46197 -->
 
 # ghenv
 
 Run a local command with an explicitly approved set of GitHub-hosted Preview
-credentials. Go CLI, GitHub authentication, no local `.env` file or vault service.
+credentials. Standalone CLI, GitHub authentication, no local `.env` file or vault service.
 
 ```sh
 ghenv run --repo OWNER/REPO --secrets API_KEY --vars API_BASE_URL -- npm run dev
@@ -83,6 +83,15 @@ marker prevents mixing correctly labelled bundles; it cannot detect a
 production credential that an owner incorrectly labels as Preview. Restrict who
 can change the bundle, workflow, and code it builds.
 
+## Check installation and setup
+
+```sh
+ghenv --version
+ghenv doctor --repo OWNER/REPO
+```
+
+`doctor` checks GitHub authentication and the installed workflow without exporting credentials. Dispatch permissions, environment approval and selected bundle names are checked during the actual handoff. Errors identify missing authentication, unavailable workflows and denied API requests without echoing credential-bearing diagnostics.
+
 ## Running commands
 
 ```sh
@@ -91,8 +100,7 @@ ghenv run --repo OWNER/REPO --env Preview \
   --timeout 10m -- npm run dev
 ```
 
-Flags go before `--`; the command and its arguments go after it. Requested values
-replace matching variables inherited by the child. The command inherits terminal
+Flags go before `--`; the command and its arguments go after it. From v0.4.0, `run` starts the child with an isolated environment of terminal and tool paths plus the requested values. Other inherited credentials and loader hooks are removed, and Expo dotenv loading is disabled. Use `--clean-env=false` only when you deliberately need the parent environment; this also permits inherited credentials and application dotenv overrides. The command inherits terminal
 streams and its ordinary exit code is returned by `ghenv`. Interactive children
 receive the foreground terminal.
 
@@ -209,7 +217,7 @@ Pin a released CLI in your tool manifest, for example:
 
 ```toml
 [tools]
-"go:github.com/nicodes/ghenv" = "0.2.0"
+"go:github.com/nicodes/ghenv" = "0.4.0"
 ```
 
 Wrap the existing development supervisor once per session:
@@ -218,7 +226,7 @@ Wrap the existing development supervisor once per session:
 ghenv run --clean-env --repo OWNER/PROJECT --secrets API_KEY --vars PUBLIC_KEY -- make product-dev
 ```
 
-`--clean-env` keeps terminal settings, executable/tool/cache paths and the SSH
+`run` isolates the child by default; `--clean-env` explicitly selects the same behavior. It keeps terminal settings, executable/tool/cache paths and the SSH
 agent socket. It drops other inherited variables, including GitHub tokens,
 remote database URLs, provider keys, shell startup hooks and Make overrides.
 GitHub authentication still uses the original parent environment during the
