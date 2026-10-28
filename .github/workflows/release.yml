@@ -25,3 +25,4 @@ jobs:
       tools-ref: 'a404cbcef2a2ccfb7a9aa1961f5d893e0c31ad42'
       bump: ${{ inputs.bump }}
       binary: ghenv
+      version-symbol: main.version

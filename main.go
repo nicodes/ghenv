@@ -9,15 +9,35 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"runtime/debug"
 	"slices"
 	"strings"
 	"syscall"
 	"time"
 )
 
+var version = "dev"
+
+func printVersion() {
+	source := "unknown"
+	if info, ok := debug.ReadBuildInfo(); ok {
+		if version == "dev" && info.Main.Version != "" && info.Main.Version != "(devel)" {
+			version = info.Main.Version
+		}
+		for _, setting := range info.Settings {
+			if setting.Key == "vcs.revision" {
+				source = setting.Value
+			}
+		}
+	}
+	fmt.Printf("ghenv %s\nsource: %s\n", version, source)
+}
+
 const usage = `ghenv: run a local command with GitHub Actions secrets and variables.
 
 Usage:
+  ghenv --version
+  ghenv doctor --repo OWNER/REPO
   ghenv dev [--mode auto|preview|local] [--config ghenv.json] -- COMMAND [ARG...]
   ghenv run --repo OWNER/REPO --secrets NAME,OTHER --vars NAME -- COMMAND [ARG...]
   ghenv local -- COMMAND [ARG...]  (clean, credential-free; no GitHub request)
@@ -29,7 +49,7 @@ Options (before --):
   --secrets    Comma-separated secret names to inject
   --vars       Comma-separated variable names to inject
   --timeout    Maximum time to wait for Actions (default: 5m)
-  --clean-env  Inherit only terminal/tool paths, then inject requested values
+  --clean-env  Isolate inherited credentials (default true; false opts into inheritance)
 
 Requires gh auth login and Actions write access. No .env files are written.
 `
@@ -50,7 +70,7 @@ func parseOptions(args []string) (options, error) {
 	fs.StringVar(&o.Secrets, "secrets", "", "comma-separated secret names")
 	fs.StringVar(&o.Variables, "vars", "", "comma-separated variable names")
 	fs.DurationVar(&o.Timeout, "timeout", 5*time.Minute, "workflow timeout")
-	fs.BoolVar(&o.CleanEnvironment, "clean-env", false, "isolate child credentials from the parent environment")
+	fs.BoolVar(&o.CleanEnvironment, "clean-env", true, "isolate child credentials from the parent environment")
 	separator := slices.Index(args, "--")
 	if separator < 0 || separator == len(args)-1 {
 		return o, errors.New("specify a command after --")
@@ -102,6 +122,10 @@ func main() {
 	}
 	var err error
 	switch os.Args[1] {
+	case "version", "--version", "-v":
+		printVersion()
+	case "doctor":
+		err = runDoctor(os.Args[2:])
 	case "dev":
 		err = runDevelopment(os.Args[2:])
 	case "local":
