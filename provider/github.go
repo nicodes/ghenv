@@ -51,12 +51,28 @@ func ghAPI(ctx context.Context, method, path string, body any) ([]byte, error) {
 	var output limitedBuffer
 	cmd.Stdout = &output
 	// Do not echo API bodies or credentials from subprocess diagnostics.
-	cmd.Stderr = io.Discard
+	var diagnostic limitedBuffer
+	cmd.Stderr = &diagnostic
 	if err = cmd.Run(); err != nil {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		return nil, fmt.Errorf("GitHub %s %s failed; check gh authentication, Actions permissions and workflow setup", method, strings.Split(path, "?")[0])
+		if errors.Is(err, exec.ErrNotFound) {
+			return nil, errors.New("github_cli_missing: install GitHub CLI (gh), then run gh auth login")
+		}
+		code, message := "github_request_failed", "run ghenv doctor --repo OWNER/REPO to check setup"
+		text := diagnostic.buffer.String()
+		switch {
+		case strings.Contains(text, "HTTP 401") || strings.Contains(text, "gh auth login"):
+			code, message = "github_auth_required", "run gh auth login --hostname github.com"
+		case strings.Contains(text, "HTTP 403") || strings.Contains(text, "HTTP 429"):
+			code, message = "github_access_denied", "check Actions read/write permission, repository access and GitHub rate limits"
+		case strings.Contains(text, "HTTP 404"):
+			code, message = "github_not_found", "check repository access and install .github/workflows/ghenv.yml on the default branch"
+		case strings.Contains(text, "HTTP 422"):
+			code, message = "github_invalid_dispatch", "check the trusted workflow ref and ghenv workflow inputs"
+		}
+		return nil, fmt.Errorf("%s: GitHub %s %s failed; %s", code, method, strings.Split(path, "?")[0], message)
 	}
 	return output.buffer.Bytes(), nil
 }
@@ -104,6 +120,7 @@ func fetchEnvironment(ctx context.Context, api apiFunc, o Request) (map[string]s
 	}
 	runPath := fmt.Sprintf("%s/runs/%d", prefix, dispatch.ID)
 	fmt.Fprintf(os.Stderr, "ghenv: waiting for https://github.com/%s/actions/runs/%d\n", o.Repo, dispatch.ID)
+	previousStatus := ""
 	for {
 		data, err = api(ctx, "GET", runPath, nil)
 		if err != nil {
@@ -113,9 +130,13 @@ func fetchEnvironment(ctx context.Context, api apiFunc, o Request) (map[string]s
 		if err = json.Unmarshal(data, &run); err != nil {
 			return nil, errors.New("invalid workflow run response")
 		}
+		if run.Status == "waiting" && run.Status != previousStatus {
+			fmt.Fprintln(os.Stderr, "ghenv: waiting for Preview environment approval; approve the linked workflow run")
+		}
+		previousStatus = run.Status
 		if run.Status == "completed" {
 			if run.Conclusion != "success" {
-				return nil, fmt.Errorf("workflow finished with %s; check the run for missing names or environment approval", run.Conclusion)
+				return nil, fmt.Errorf("workflow_failed: workflow finished with %s; inspect the linked run and check the approved bundle contains every requested name", run.Conclusion)
 			}
 			break
 		}
