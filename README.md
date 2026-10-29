@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 98e9a7dc76f8a478ed31fc5ad4d4d2e8f719c5b1da2a439fd2ca23c820e46197 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: f40641e820c59626d82200922a4978b6ad37d8d3721462cb2d1758ae07b2c9d8 -->
 
 # ghenv
 
@@ -9,9 +9,25 @@ credentials. Standalone CLI, GitHub authentication, no local `.env` file or vaul
 ghenv run --repo OWNER/REPO --secrets API_KEY --vars API_BASE_URL -- npm run dev
 ```
 
-## Setup
+## Install
 
-The install command below downloads and verifies a prebuilt binary into `~/.local/bin`. A Go compiler is not required. Add that directory to your PATH if necessary.
+Linux and macOS (x86_64 or arm64), using prebuilt binaries:
+
+With curl:
+
+```sh
+curl -fsSL https://ghenv.dev/install | sh
+```
+
+Or with mise:
+
+```sh
+mise use --global github:nicodes/ghenv@latest
+```
+
+The shell installer verifies the release checksum and installs to `~/.local/bin`; add that directory to your PATH if necessary. Mise manages its own installation directory and PATH through its shell activation.
+
+## Setup
 
 Requires [GitHub CLI](https://cli.github.com/), Linux or macOS (x86_64 or arm64), and a
 GitHub.com repository with Actions enabled. Authenticate with `gh auth login`.
@@ -50,7 +66,6 @@ per-secret limit.
 
 ```sh
 gh secret set GHENV_PREVIEW_BUNDLE --repo OWNER/REPO --env Preview
-curl -fsSL https://ghenv.dev/install | sh
 ghenv run --repo OWNER/REPO --secrets API_KEY --vars API_BASE_URL -- npm run dev
 ```
 
