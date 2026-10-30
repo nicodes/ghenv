@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 985182d5cba3973a7fda0b48afc165e0fcf1bac3da97d4caccada16dfd2639a5 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 01d751d4ff268eb2062239e2f9da1eb5e3db21b5a3a829de0b6fb162e6d856d3 -->
 
 # ghenv
 
@@ -207,9 +207,7 @@ duplicate JSON keys, invalid identifiers and unsupported modes are refused.
 The existing clean environment, dotenv boundary, interactive terminal handling,
 exit status and process-group cleanup also apply to `dev`.
 
-Projects can use `komizo dev` with the `development` policy in `komizo.json`.
-`komizo dev --mode local` selects the offline mode. The standalone `run`, `dev`
-and `local` commands are available for other explicitly selected commands.
+Projects own their development commands. Use `ghenv dev --config ghenv.json --mode local -- COMMAND` for an explicitly selected offline session, or wrap the native supervisor with `ghenv local -- COMMAND`. Deployment configuration is independent of development credentials.
 
 ## Local development launchers
 
