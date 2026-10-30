@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: b1374862bd6ab904b9fea8e64d388f8ff1408204a3bc020cf977f98bb6459358 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 985182d5cba3973a7fda0b48afc165e0fcf1bac3da97d4caccada16dfd2639a5 -->
 
 # ghenv
 
@@ -250,3 +250,16 @@ environment, err := provider.Prepare(ctx, "profile.json", "auto", os.Environ())
 ```
 
 The profile uses the version 1 project fields above. `Prepare` returns an isolated child environment. `Fetch` accepts an explicit `provider.Request`; `SealBundle` implements the workflow export boundary. No plaintext credential file is created.
+
+## Contributor verification
+
+Tool versions and native tasks live in `mise.toml`. Prepare the pinned helper source and run the complete gate:
+
+```sh
+git clone https://github.com/nicodes/tools.git .ci-tools
+git -C .ci-tools checkout --detach 091101094fedf5ce2e67c339c1c9c842d6a662dc
+mise install
+mise run check
+```
+
+Native build and test commands retain source and output checks, with receipts in `.artifacts/verification`. Existing product release rules and artifacts remain owned by this repository. End users install the product’s published distribution.
