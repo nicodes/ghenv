@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 01d751d4ff268eb2062239e2f9da1eb5e3db21b5a3a829de0b6fb162e6d856d3 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 92fd91bb53f7ebeed02b2782643155bf18cf8aa0963b8065db4871508cc2ee00 -->
 
 # ghenv
 
@@ -149,7 +149,7 @@ ciphertext until retention expires, and its remote job may continue.
 **Local users and administrators can inspect injected secrets.** An application
 can print or persist its environment. Keys developers must never read need to
 stay behind a remote API. Browser-facing settings such as `EXPO_PUBLIC_*` remain
-public. Go does not guarantee complete erasure of values from memory.
+public. Rust does not guarantee complete erasure of all values from memory.
 
 ## Replacing dotenv files
 
@@ -239,15 +239,29 @@ To reuse existing individual Preview secrets and variables, see the explicit
 allowlist example in [ghenv-actions](https://github.com/nicodes/ghenv-actions).
 The caller constructs the bundle in memory; no duplicate secret needs provisioning.
 
-## Go provider
+## Rust provider
 
-Import `github.com/nicodes/ghenv/provider` to reuse the credential handoff without launching a process.
+The root Rust crate exposes `ghenv::provider` for project runners that need the credential handoff without launching a process.
 
-```go
-environment, err := provider.Prepare(ctx, "profile.json", "auto", os.Environ())
+```rust
+use ghenv::provider::{Context, Values, prepare};
+use std::time::Duration;
+
+let context = Context::new(Duration::from_secs(300))?;
+let parent: Values = std::env::vars().collect();
+let environment = prepare(&context, "profile.json", "auto", &parent)?;
 ```
 
-The profile uses the version 1 project fields above. `Prepare` returns an isolated child environment. `Fetch` accepts an explicit `provider.Request`; `SealBundle` implements the workflow export boundary. No plaintext credential file is created.
+The profile uses the version 1 project fields above. `prepare` returns an isolated child environment. `fetch` accepts an explicit `Request`; `seal_bundle` implements the workflow export boundary. `Context` supports a deadline and explicit cancellation. No plaintext credential file is created. The encrypted `ghenv-v1` protocol remains compatible with existing workflow exporters. Earlier immutable Go module tags remain available for older consumers.
+
+## Build from source
+
+With Rust 1.94.0 installed:
+
+```sh
+cargo build --release --locked
+./target/release/ghenv --version
+```
 
 ## Contributor verification
 

@@ -17,7 +17,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  native-cli:
+    uses: ./.github/workflows/cli-native.yml
+    permissions:
+      contents: read
   ci:
+    needs: native-cli
     name: Test
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -26,6 +31,12 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         persist-credentials: false
+    - name: Download native CLI archives
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+      with:
+        pattern: native-cli-*
+        merge-multiple: true
+        path: .artifacts/native-cli
     - name: Set up development tools
       uses: nicodes/tools/setup@091101094fedf5ce2e67c339c1c9c842d6a662dc
       env:
@@ -52,6 +63,7 @@ jobs:
         mise run check
     env:
       MISE_GITHUB_TOKEN: ${{ github.token }}
+      NATIVE_CLI_ARCHIVES: ${{ github.workspace }}/.artifacts/native-cli
   macos:
     name: Test (macOS)
     runs-on: macos-latest

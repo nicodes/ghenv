@@ -6,3 +6,7 @@
 
 /release-assets/
 /.ci-tools/
+/target/
+__pycache__/
+
+/dist/

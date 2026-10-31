@@ -6,24 +6,115 @@ name: Release
         description: Version bump
         required: true
         type: choice
-        default: patch
-        options:
-        - patch
-        - minor
-        - major
+        options: [patch, minor, major]
 permissions: {}
 concurrency: release-${{ github.repository }}
 jobs:
-  release:
-    name: Release
-    uses: nicodes/tools/.github/workflows/cli-release.yml@091101094fedf5ce2e67c339c1c9c842d6a662dc
+  identity:
+    name: Select immutable release identity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     permissions:
-      contents: write
+      contents: read
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
+      date: ${{ steps.release.outputs.date }}
+    steps:
+    - name: Check out source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Determine release version
+      id: release
+      env:
+        BUMP: ${{ inputs.bump }}
+      run: |
+        set -euo pipefail
+        test "$GITHUB_REF" = refs/heads/main || { echo 'Run releases from main.' >&2; exit 1; }
+        prefix=v
+        git fetch --tags --force
+        latest="$(git tag --list "${prefix}[0-9]*" | sed -E "s/^${prefix}//" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
+        test -n "$latest" || latest=0.0.0
+        IFS=. read -r major minor patch <<< "$latest"
+        case "$BUMP" in
+          major) major=$((major + 1)); minor=0; patch=0 ;;
+          minor) minor=$((minor + 1)); patch=0 ;;
+          patch) patch=$((patch + 1)) ;;
+          *) exit 1 ;;
+        esac
+        version="$major.$minor.$patch"
+        tag="$prefix$version"
+        if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+          echo "Release tag already exists; refusing to replace it." >&2
+          exit 1
+        fi
+        printf 'version=%s\ntag=%s\ndate=%s\n' "$version" "$tag" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+  build-cli:
+    name: Build native CLI
+    needs: identity
+    uses: ./.github/workflows/cli-native.yml
+    permissions:
+      contents: read
+    with:
+      version: ${{ needs.identity.outputs.tag }}
+      date: ${{ needs.identity.outputs.date }}
+  accept-cli:
+    name: Accept CLI release archives
+    needs: [identity, build-cli]
+    permissions:
+      contents: read
       attestations: write
       id-token: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      MISE_GITHUB_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.identity.outputs.tag }}
+      COMMIT: ${{ github.sha }}
+      DATE: ${{ needs.identity.outputs.date }}
+      NATIVE_CLI_ARCHIVES: ${{ github.workspace }}/.artifacts/native-cli
+    steps:
+    - name: Check out source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+    - name: Download native archives
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+      with:
+        pattern: native-cli-*
+        merge-multiple: true
+        path: .artifacts/native-cli
+    - name: Set up development tools
+      uses: nicodes/tools/setup@091101094fedf5ce2e67c339c1c9c842d6a662dc
+      env:
+        GH_TOKEN: ${{ github.token }}
+      timeout-minutes: 5
+    - name: Verify complete project gate and shipping archives
+      run: mise run check
+    - name: Attest accepted release archives
+      uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+      with:
+        subject-path: dist/*
+    - name: Upload accepted archives
+      id: accepted
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: accepted-cli-${{ github.sha }}-${{ github.run_attempt }}
+        path: dist/*
+        if-no-files-found: error
+        retention-days: 7
+    outputs:
+      artifact-id: ${{ steps.accepted.outputs.artifact-id }}
+  publish:
+    name: Publish verified archives
+    needs: [identity, accept-cli]
+    uses: nicodes/tools/.github/workflows/cli-publish.yml@091101094fedf5ce2e67c339c1c9c842d6a662dc
+    permissions:
+      contents: write
     with:
       tools-ref: 091101094fedf5ce2e67c339c1c9c842d6a662dc
-      bump: ${{ inputs.bump }}
       binary: ghenv
-      version-symbol: main.version
-      check-command: mise run check
+      tag: ${{ needs.identity.outputs.tag }}
+      artifact-id: ${{ needs.accept-cli.outputs.artifact-id }}

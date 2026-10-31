@@ -41,13 +41,13 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: "Set up Go"
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version: '1.27.3'
-          cache: false
+      - name: Set up pinned Rust
+        run: rustup toolchain install 1.94.0 --profile minimal
       - name: Build before exposing secrets
-        run: go build -o "$RUNNER_TEMP/ghenv" .
+        run: |
+          set -euo pipefail
+          cargo +1.94.0 build --locked --release --target-dir "$RUNNER_TEMP/ghenv-build"
+          cp "$RUNNER_TEMP/ghenv-build/release/ghenv" "$RUNNER_TEMP/ghenv"
       - name: Encrypt requested values
         env:
           GHENV_PREVIEW_BUNDLE: ${{ secrets.GHENV_PREVIEW_BUNDLE }}

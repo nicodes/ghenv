@@ -1,0 +1,19 @@
+ghenv: run a local command with GitHub Actions secrets and variables.
+
+Usage:
+  ghenv --version
+  ghenv doctor --repo OWNER/REPO
+  ghenv dev [--mode auto|preview|local] [--config ghenv.json] -- COMMAND [ARG...]
+  ghenv run --repo OWNER/REPO --secrets NAME,OTHER --vars NAME -- COMMAND [ARG...]
+  ghenv local -- COMMAND [ARG...]  (clean, credential-free; no GitHub request)
+
+Options (before --):
+  --repo       GitHub repository containing the ghenv.yml workflow (required)
+  --env        GitHub environment (only Preview is permitted)
+  --ref        Trusted workflow Git ref (default: main)
+  --secrets    Comma-separated secret names to inject
+  --vars       Comma-separated variable names to inject
+  --timeout    Maximum time to wait for Actions (default: 5m)
+  --clean-env  Isolate inherited credentials (default true; false opts into inheritance)
+
+Requires gh auth login and Actions write access. No .env files are written.

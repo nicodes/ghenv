@@ -1,18 +1,19 @@
 [tools]
 "python" = "3.13.11"
-"go" = "1.27.3"
-"go:golang.org/x/vuln/cmd/govulncheck" = "1.7.0"
+"rust" = "1.94.0"
+"cargo:cargo-audit" = "0.22.2"
+"actionlint" = "1.7.12"
+"shellcheck" = "0.11.0"
 
 [env]
 TOOLS_ROOT = "{{ get_env(name='TOOLS_ROOT', default=config_root ~ '/.ci-tools') }}"
-GOTOOLCHAIN = "local"
 PYTHONDONTWRITEBYTECODE = "1"
 
 [tasks."install"]
-run = ["go mod download"]
+run = ["rustup component add --toolchain 1.94.0 rustfmt clippy", "cargo fetch --locked"]
 
 [tasks."lint"]
-run = ["bash -euo pipefail -c 'test -z \"$(gofmt -l .)\"; go vet ./...'"]
+run = ["cargo fmt --check", "cargo clippy --locked --all-targets -- -D warnings", "actionlint", "shellcheck scripts/build-release.sh"]
 
 [tasks."unit"]
 run = "python3 \"$TOOLS_ROOT/helpers/verification.py\" test --name unit --artifact .artifacts/build -- mise run _unit"
@@ -23,21 +24,21 @@ run = "python3 \"$TOOLS_ROOT/helpers/verification.py\" build --name build --arti
 depends = ["install"]
 
 [tasks."artifact-check"]
-run = ["python3 -c 'from pathlib import Path; import os; p=Path('\"'\"'.artifacts/build/app'\"'\"'); assert not p.is_symlink() and p.is_file() and p.stat().st_size and os.access(p,os.X_OK), '\"'\"'nonempty executable artifact required'\"'\"''"]
+run = ["python3 scripts/check_archives.py"]
 depends = ["build"]
 
 [tasks."vuln"]
-run = ["govulncheck ./..."]
+run = ["cargo audit --file Cargo.lock --db .artifacts/advisory-db"]
 
 [tasks."clean"]
 run = ["python3 -c 'from pathlib import Path; import shutil; p=Path('\"'\"'.artifacts/build'\"'\"'); assert not p.parent.is_symlink() and not p.is_symlink(), '\"'\"'linked build output'\"'\"'; shutil.rmtree(p) if p.exists() else None'"]
 
 [tasks."_build"]
-run = ["bash -euo pipefail -c 'test ! -L .artifacts && test ! -L .artifacts/build; mkdir -p .artifacts/build; go build -trimpath -o .artifacts/build/app .'"]
+run = ["bash scripts/build-release.sh"]
 hide = true
 
 [tasks."_unit"]
-run = ["go test -race -count=1 ./..."]
+run = ["cargo test --locked", "cargo build --locked", "python3 tests/cli_test.py", "python3 tests/installer_test.py"]
 hide = true
 
 [tasks."_test-stages"]
