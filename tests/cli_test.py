@@ -78,12 +78,23 @@ class CLI(unittest.TestCase):
         self.assertLess(len(result.stdout+result.stderr),1000)
     @unittest.skipIf(os.name=='nt','synthetic gh executable requires POSIX shebang support')
     def test_cancellation_of_download_still_uses_a_fresh_cleanup_deadline(self):
-        started=time.monotonic()
-        result=self.run_request('--timeout','2s',mode='download-hang')
-        self.assertEqual(result.returncode,1)
-        self.assertIn('deadline exceeded',result.stderr)
-        self.assertLess(time.monotonic()-started,5)
-        self.assertTrue((self.root/'deleted').exists())
+        process=subprocess.Popen([str(BINARY),'run','--repo','owner/repo','--secrets','TOKEN','--vars','URL','--timeout','30s','--',sys.executable,'-c','raise SystemExit(0)'],cwd=self.root,env=self.env|dict(GHENV_TEST_MODE='download-hang'),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding='utf-8')
+        try:
+            deadline=time.monotonic()+15
+            while not (self.root/'download-started').exists():
+                self.assertIsNone(process.poll())
+                self.assertLess(time.monotonic(),deadline)
+                time.sleep(.02)
+            started=time.monotonic()
+            process.send_signal(signal.SIGTERM)
+            output,diagnostic=process.communicate(timeout=5)
+            self.assertEqual(process.returncode,1)
+            self.assertIn('context canceled',diagnostic)
+            self.assertNotIn('synthetic line',output+diagnostic)
+            self.assertLess(time.monotonic()-started,5)
+            self.assertTrue((self.root/'deleted').exists())
+        finally:
+            if process.poll() is None:process.kill();process.communicate(timeout=3)
     @unittest.skipIf(os.name=='nt','process supervision is supported on Linux and macOS')
     def test_dev_preview_prefixes_aliases_and_local_mode(self):
         result=self.cli('dev','--','--not-a-command')

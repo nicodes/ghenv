@@ -47,7 +47,9 @@ elif '/runs/42/artifacts' in path:
     artifacts=[] if mode=='missing-artifact' else [dict(id=7,name='ghenv-'+inputs['request_id'],expired=mode=='expired')]
     print(json.dumps(dict(artifacts=artifacts)))
 elif path.endswith('/artifacts/7/zip'):
-    if mode=='download-hang': time.sleep(30)
+    if mode=='download-hang':
+        (root/'download-started').touch()
+        time.sleep(30)
     if mode=='download-failed': sys.exit(1)
     inputs=json.loads((root/'request.json').read_text())
     secrets=dict(TOKEN="synthetic line\n'quoted' $()=😀")
