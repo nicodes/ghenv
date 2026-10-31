@@ -57,7 +57,7 @@ jobs:
           GHENV_REQUEST_ID: ${{ inputs.request_id }}
         run: '"$RUNNER_TEMP/ghenv" seal > "$RUNNER_TEMP/payload.json"'
       - name: "Upload artifacts"
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ghenv-${{ inputs.request_id }}
           path: ${{ runner.temp }}/payload.json
