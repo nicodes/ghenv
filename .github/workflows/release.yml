@@ -87,7 +87,7 @@ jobs:
         merge-multiple: true
         path: .artifacts/native-cli
     - name: Set up development tools
-      uses: nicodes/tools/setup@091101094fedf5ce2e67c339c1c9c842d6a662dc
+      uses: nicodes/tools/setup@f412061a7a3f0914db9e09d1159e69504aee8706
       env:
         GH_TOKEN: ${{ github.token }}
       timeout-minutes: 5
@@ -110,11 +110,11 @@ jobs:
   publish:
     name: Publish verified archives
     needs: [identity, accept-cli]
-    uses: nicodes/tools/.github/workflows/cli-publish.yml@091101094fedf5ce2e67c339c1c9c842d6a662dc
+    uses: nicodes/tools/.github/workflows/cli-publish.yml@f412061a7a3f0914db9e09d1159e69504aee8706
     permissions:
       contents: write
     with:
-      tools-ref: 091101094fedf5ce2e67c339c1c9c842d6a662dc
+      tools-ref: f412061a7a3f0914db9e09d1159e69504aee8706
       binary: ghenv
       tag: ${{ needs.identity.outputs.tag }}
       artifact-id: ${{ needs.accept-cli.outputs.artifact-id }}
