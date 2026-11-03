@@ -31,7 +31,7 @@ depends = ["build"]
 run = ["cargo audit --file Cargo.lock --db .artifacts/advisory-db"]
 
 [tasks."clean"]
-run = ["python3 -c 'from pathlib import Path; import shutil; p=Path('\"'\"'.artifacts/build'\"'\"'); assert not p.parent.is_symlink() and not p.is_symlink(), '\"'\"'linked build output'\"'\"'; shutil.rmtree(p) if p.exists() else None'"]
+run = "python3 \"$TOOLS_ROOT/helpers/clean.py\" --path dist --path target --path .artifacts/build --path .artifacts/rust-target --path .artifacts/advisory-db"
 
 [tasks."_build"]
 run = ["bash scripts/build-release.sh"]

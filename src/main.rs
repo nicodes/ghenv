@@ -126,18 +126,44 @@ fn environment() -> Values {
         .filter_map(|(name, value)| Some((name.into_string().ok()?, value.into_string().ok()?)))
         .collect()
 }
-fn execute(args: &[String], raw_args: &[std::ffi::OsString]) -> Result<i32> {
+fn execute(args: &[String], raw_args: &[std::ffi::OsString], machine: bool) -> Result<i32> {
     let Some(first) = args.first() else {
         print!("{USAGE}");
         return Ok(0);
     };
+    if machine
+        && !matches!(
+            first.as_str(),
+            "help" | "--help" | "-h" | "version" | "--version" | "-v" | "doctor"
+        )
+    {
+        return Err("--json supports version, doctor and help; launch commands retain their child's streams and seal retains its encrypted wire format".into());
+    }
     match first.as_str() {
-        "help" | "--help" | "-h" => print!("{USAGE}"),
-        "version" | "--version" | "-v" => println!(
-            "ghenv {}\nsource: {}",
-            env!("GHENV_VERSION"),
-            env!("GHENV_COMMIT")
-        ),
+        "help" | "--help" | "-h" => {
+            if machine {
+                println!(
+                    "{}",
+                    serde_json::json!({"v":1,"ok":true,"result":{"help":USAGE}})
+                );
+            } else {
+                print!("{USAGE}");
+            }
+        }
+        "version" | "--version" | "-v" => {
+            if machine {
+                println!(
+                    "{}",
+                    serde_json::json!({"v":1,"ok":true,"result":{"version":env!("GHENV_VERSION"),"commit":env!("GHENV_COMMIT")}})
+                );
+            } else {
+                println!(
+                    "ghenv {}\nsource: {}",
+                    env!("GHENV_VERSION"),
+                    env!("GHENV_COMMIT")
+                );
+            }
+        }
         "seal" => {
             let get = |name| std::env::var(name).unwrap_or_default();
             let data = provider::seal_bundle(
@@ -155,7 +181,8 @@ fn execute(args: &[String], raw_args: &[std::ffi::OsString]) -> Result<i32> {
                 .iter()
                 .any(|a| matches!(a.as_str(), "--help" | "-h" | "-help"))
             {
-                println!("Usage of doctor:\n  --repo OWNER/REPO");
+                if machine { println!("{}",serde_json::json!({"v":1,"ok":true,"result":{"help":"ghenv --json doctor --repo OWNER/REPO"}})); }
+                else { println!("Usage of doctor:\n  --repo OWNER/REPO"); }
                 return Ok(0);
             }
             let flags = flags(&args[1..], &[("repo", "")])?;
@@ -172,9 +199,16 @@ fn execute(args: &[String], raw_args: &[std::ffi::OsString]) -> Result<i32> {
                 return Err("github_auth_required: run gh auth login --hostname github.com".into());
             }
             provider::check_workflow(&context, &flags["repo"])?;
-            println!(
-                "GitHub authentication: ready\nghenv.yml workflow: active\nDispatch permissions, Preview approval and requested bundle names are checked when you run a command.\nUse ghenv local -- COMMAND for an offline session."
-            );
+            if machine {
+                println!(
+                    "{}",
+                    serde_json::json!({"v":1,"ok":true,"result":{"repository":flags["repo"],"github_authentication":"ready","workflow":"active"}})
+                );
+            } else {
+                println!(
+                    "GitHub authentication: ready\nghenv.yml workflow: active\nDispatch permissions, Preview approval and requested bundle names are checked when you run a command.\nUse ghenv local -- COMMAND for an offline session."
+                );
+            }
         }
         "local" => {
             if args.len() < 3 || args[1] != "--" {
@@ -251,7 +285,18 @@ fn execute(args: &[String], raw_args: &[std::ffi::OsString]) -> Result<i32> {
     Ok(0)
 }
 fn main() {
-    let raw: Vec<_> = std::env::args_os().skip(1).collect();
+    let mut raw: Vec<_> = std::env::args_os().skip(1).collect();
+    let machine = raw.first().is_some_and(|arg| arg == "--json");
+    if machine {
+        raw.remove(0);
+    }
+    if machine && raw.is_empty() {
+        println!(
+            "{}",
+            serde_json::json!({"v":1,"ok":false,"error":{"code":"invalid_usage","message":"expected version, doctor or help after --json"}})
+        );
+        std::process::exit(2);
+    }
     let prefix = raw.iter().position(|arg| arg == "--").unwrap_or(raw.len());
     if raw[..prefix].iter().any(|arg| arg.to_str().is_none()) {
         eprintln!("ghenv: options must be valid UTF-8");
@@ -261,10 +306,16 @@ fn main() {
         .iter()
         .map(|arg| arg.to_string_lossy().into_owned())
         .collect();
-    match execute(&args, &raw) {
+    match execute(&args, &raw, machine) {
         Ok(code) => std::process::exit(code),
         Err(error) => {
             eprintln!("ghenv: {error}");
+            if machine {
+                println!(
+                    "{}",
+                    serde_json::json!({"v":1,"ok":false,"error":{"code":"operation_failed","message":error.to_string()}})
+                );
+            }
             std::process::exit(1);
         }
     }
