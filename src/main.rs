@@ -181,8 +181,14 @@ fn execute(args: &[String], raw_args: &[std::ffi::OsString], machine: bool) -> R
                 .iter()
                 .any(|a| matches!(a.as_str(), "--help" | "-h" | "-help"))
             {
-                if machine { println!("{}",serde_json::json!({"v":1,"ok":true,"result":{"help":"ghenv --json doctor --repo OWNER/REPO"}})); }
-                else { println!("Usage of doctor:\n  --repo OWNER/REPO"); }
+                if machine {
+                    println!(
+                        "{}",
+                        serde_json::json!({"v":1,"ok":true,"result":{"help":"ghenv --json doctor --repo OWNER/REPO"}})
+                    );
+                } else {
+                    println!("Usage of doctor:\n  --repo OWNER/REPO");
+                }
                 return Ok(0);
             }
             let flags = flags(&args[1..], &[("repo", "")])?;
@@ -300,6 +306,12 @@ fn main() {
     let prefix = raw.iter().position(|arg| arg == "--").unwrap_or(raw.len());
     if raw[..prefix].iter().any(|arg| arg.to_str().is_none()) {
         eprintln!("ghenv: options must be valid UTF-8");
+        if machine {
+            println!(
+                "{}",
+                serde_json::json!({"v":1,"ok":false,"error":{"code":"invalid_usage","message":"options must be valid UTF-8"}})
+            );
+        }
         std::process::exit(1);
     }
     let args: Vec<_> = raw
