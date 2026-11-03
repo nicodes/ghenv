@@ -17,3 +17,7 @@ Options (before --):
   --clean-env  Isolate inherited credentials (default true; false opts into inheritance)
 
 Requires gh auth login and Actions write access. No .env files are written.
+
+Machine results: ghenv --json version | doctor --repo OWNER/REPO | help
+Finite diagnostics emit one JSON result; launch commands preserve child streams, and seal preserves its encrypted binary protocol.
+Project settings default to ghenv.json; dev --config FILE selects an explicit project configuration.

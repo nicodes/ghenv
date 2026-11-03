@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 92fd91bb53f7ebeed02b2782643155bf18cf8aa0963b8065db4871508cc2ee00 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 68730656c67f266e468ff762be7c80353c7fd636a6981cc8b391a8d73ee7b4ee -->
 
 # ghenv
 
@@ -275,3 +275,13 @@ mise run check
 ```
 
 Native build and test commands retain source and output checks, with receipts in `.artifacts/verification`. Existing product release rules and artifacts remain owned by this repository. End users install the product’s published distribution.
+
+## Contributor task interface
+
+Contributor tool versions and task entry points live in the native Mise configuration. Use `mise run lint` for source checks, `mise run test` for the applicable behavioral tests, and `mise run check` for the complete supported gate. `mise run clean` removes declared generated outputs while preserving source, credentials and retained data. This package has no separate Mise development service; use its native entry points directly.
+
+## Machine diagnostics
+
+Use `ghenv --json version`, `ghenv --json doctor --repo OWNER/REPO`, or `ghenv --json help` for one structured result on stdout. Diagnostics use stderr and failures exit nonzero. `doctor` verifies the existing GitHub authentication and workflow without requesting a secret bundle.
+
+`dev --config FILE` selects an explicit project configuration; the default is `ghenv.json`. Launch commands preserve their child process streams and exit status. `seal` retains its encrypted binary protocol. These commands reject `--json` before launching a child or acquiring secrets.
