@@ -1,0 +1,72 @@
+version = 1
+recipe = "rust-cli"
+
+[[components.rust]]
+name = "cli"
+manifest = "Cargo.toml"
+binaries = ["ghenv"]
+profile = "release"
+
+[package]
+binary = "ghenv"
+component = "cli"
+output = ".artifacts/build/ghenv"
+profile = "release"
+files = ["README.md"]
+version_arguments = ["--version"]
+version_template = "{binary} {version}\nsource: {commit}"
+release_metadata = false
+
+[[package.native_targets]]
+runner = "ubuntu-24.04"
+target = "x86_64-unknown-linux-musl"
+platform = "Linux"
+arch = "x86_64"
+extension = "tar.gz"
+checks = []
+
+[[package.native_targets]]
+runner = "ubuntu-24.04-arm"
+target = "aarch64-unknown-linux-musl"
+platform = "Linux"
+arch = "arm64"
+extension = "tar.gz"
+checks = []
+
+[[package.native_targets]]
+runner = "macos-15-intel"
+target = "x86_64-apple-darwin"
+platform = "Darwin"
+arch = "x86_64"
+extension = "tar.gz"
+checks = []
+
+[[package.native_targets]]
+runner = "macos-15"
+target = "aarch64-apple-darwin"
+platform = "Darwin"
+arch = "arm64"
+extension = "tar.gz"
+checks = []
+
+[artifacts]
+paths = ["dist", ".artifacts/build", ".artifacts/native-package"]
+environment = ["VERSION", "COMMIT", "DATE", "RUST_TARGET"]
+revision_environment = ["COMMIT"]
+
+[artifacts.binary_environment]
+GHENV_TEST_BINARY = ".artifacts/build/ghenv"
+
+[lint]
+shell_paths = ["install.sh"]
+
+[[tests.integration]]
+runner = "python"
+path = "tests/cli_test.py"
+
+[[tests.integration]]
+runner = "python"
+path = "tests/installer_test.py"
+
+[clean]
+paths = ["dist", "target", ".artifacts/build", ".artifacts/rust-target", ".artifacts/native-package", ".artifacts/advisory-db", ".artifacts/fixtures"]
