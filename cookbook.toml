@@ -78,3 +78,10 @@ paths = ["dist", "target", ".artifacts/build", ".artifacts/rust-target", ".artif
 [ci]
 runner = "ubuntu-24.04"
 timeout_minutes = 20
+
+[publication]
+tag_prefix = "v"
+initial = "bump"
+version_identity = "tag"
+validation_timeout = 30
+acceptance_timeout = 30
