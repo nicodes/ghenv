@@ -1,6 +1,6 @@
 # Generated cookbook entrypoint. Change cookbook.toml and regenerate.
 # Recipe data SHA256: d1e7f7e30898a36d028b1cc81fef800a8ef06500e45150890d6a24ebd17e1f4a
-COOKBOOK_REF := 4e94f9b8d304e92e90833158c9cfbb6450ebb67c
+COOKBOOK_REF := d475b54c402754a5a37a44fbd65328551995025c
 COOKBOOK_RECIPE := rust-cli
 COOKBOOK_ROOT ?= .artifacts/cookbook/$(COOKBOOK_REF)
 COOKBOOK_TEST_SUITES := lint unit security integration
@@ -14,7 +14,7 @@ ifeq ($(wildcard $(COOKBOOK_ENTRY)),)
 .DEFAULT_GOAL := help
 .PHONY: help setup
 help:
-	@printf '%s\n' 'make help' 'make setup' 'make fmt' 'make build' 'make test' 'make test:lint' 'make test:unit' 'make test:security' 'make test:integration' 'make clean'
+	@printf '%s\n' 'make help               List implemented commands' 'make setup              Prepare pinned tools and dependencies' 'make fmt                Apply formatting' 'make build              Compile, package and validate outputs' 'make test               Run implemented test groups without building' 'make test:lint          Check formatting, code and configuration' 'make test:unit          Run isolated behavior tests' 'make test:security      Run applicable security checks' 'make test:integration   Test real component boundaries' 'make clean              Remove declared outputs; preserve retained data'
 	@printf '%s\n' 'Run make setup once to fetch the pinned cookbook and prepare dependencies.'
 setup:
 	@mkdir -p "$(COOKBOOK_ROOT)"
