@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 68730656c67f266e468ff762be7c80353c7fd636a6981cc8b391a8d73ee7b4ee -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: dafaac4eceade96da03b7f95a81c487f41efb2760e7e23d63e6c7aa8e1fbe758 -->
 
 # ghenv
 
@@ -265,20 +265,20 @@ cargo build --release --locked
 
 ## Contributor verification
 
-Tool versions and native tasks live in `mise.toml`. Prepare the pinned helper source and run the complete gate:
+`mise.toml` pins contributor SDKs. The generated root Makefile selects an immutable shared cookbook revision and binds it to `cookbook.toml`.
 
 ```sh
-git clone https://github.com/nicodes/tools.git .ci-tools
-git -C .ci-tools checkout --detach 091101094fedf5ce2e67c339c1c9c842d6a662dc
-mise install
-mise run check
+make help
+make setup
+make build
+make test
 ```
 
-Native build and test commands retain source and output checks, with receipts in `.artifacts/verification`. Existing product release rules and artifacts remain owned by this repository. End users install the product’s published distribution.
+`make help` works offline before setup. `make setup` explicitly prepares pinned SDKs, locked dependencies and declared fixtures. `make build` compiles and packages the native outputs, then validates their source and artifact identity. `make test` runs the implemented checks against those current-source outputs. Run build again after changing source; tests do not install tools or build missing shipping artifacts.
 
-## Contributor task interface
+Use `make fmt` to apply formatting, `make test:lint`, `make test:unit`, `make test:security` or `make test:integration` to select a group. This recipe has no application development service. `make clean` removes declared generated outputs. Build and test evidence stays in `.artifacts/verification`.
 
-Contributor tool versions and task entry points live in the native Mise configuration. Use `mise run lint` for source checks, `mise run test` for the applicable behavioral tests, and `mise run check` for the complete supported gate. `mise run clean` removes declared generated outputs while preserving source, credentials and retained data. This package has no separate Mise development service; use its native entry points directly.
+The verified executable is `.artifacts/build/ghenv`. CI retains Linux and macOS archives for both x86_64 and arm64. Native provider/archive tests, protocol fixtures, CLI cancellation and terminal behavior, environment isolation and installer refusal checks remain product-owned. End users install the published distribution; contributor checks do not request a secret bundle.
 
 ## Machine diagnostics
 
