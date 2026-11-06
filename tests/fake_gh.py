@@ -59,7 +59,7 @@ elif path.endswith('/artifacts/7/zip'):
     if mode=='extra-name': secrets['EXTRA']='do not export';requested_secrets+=',EXTRA'
     if mode=='missing-name': requested_variables=''
     env=dict(os.environ,GHENV_PREVIEW_BUNDLE=json.dumps(dict(version=1,environment='Preview',repository='owner/repo',secrets=secrets,variables=variables)),GITHUB_REPOSITORY='owner/repo',GHENV_SECRET_NAMES=requested_secrets,GHENV_VAR_NAMES=requested_variables,GHENV_PUBLIC_KEY=inputs['public_key'],GHENV_REQUEST_ID=inputs['request_id'] if mode!='wrong-request' else 'a'*32)
-    result=subprocess.run([os.environ['GHENV_TEST_BINARY'],'seal'],env=env,capture_output=True,timeout=10)
+    result=subprocess.run([os.environ['COOKBOOK_CLI_BINARY'],'seal'],env=env,capture_output=True,timeout=10)
     assert result.returncode==0,'synthetic seal failed'
     payload=result.stdout
     if mode=='tampered': payload=b'{"version":"bad","key":"","nonce":"","ciphertext":""}'
