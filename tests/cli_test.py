@@ -9,7 +9,7 @@ import tempfile
 import time
 import unittest
 
-BINARY=Path(os.environ.get('GHENV_TEST_BINARY',str(Path(os.environ.get('CARGO_TARGET_DIR','target'))/'debug'/('ghenv.exe' if os.name=='nt' else 'ghenv')))).resolve()
+BINARY=Path(os.environ.get('COOKBOOK_CLI_BINARY',str(Path(os.environ.get('CARGO_TARGET_DIR','target'))/'debug'/('ghenv.exe' if os.name=='nt' else 'ghenv')))).resolve()
 PROFILE=dict(version=1,repository='owner/repo',default_mode='preview',secrets='TOKEN',variables='URL',prefixes=dict(TOKEN='synthetic'),aliases=dict(PUBLIC_URL='URL'),environment=dict(BUN_OPTIONS='--no-env-file'))
 
 
@@ -18,7 +18,7 @@ class CLI(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name)
-        self.env=dict(os.environ,GHENV_TEST_STATE=str(self.root),GHENV_TEST_BINARY=str(BINARY),GH_TOKEN='parent-private-sentinel',UNRELATED_API_KEY='parent-private-sentinel',EXPO_NO_DOTENV='0')
+        self.env=dict(os.environ,GHENV_TEST_STATE=str(self.root),COOKBOOK_CLI_BINARY=str(BINARY),GH_TOKEN='parent-private-sentinel',UNRELATED_API_KEY='parent-private-sentinel',EXPO_NO_DOTENV='0')
         if os.name!='nt':
             shim=self.root/'gh'
             shim.write_text('#!'+sys.executable+'\n'+(Path(__file__).parent/'fake_gh.py').read_text())

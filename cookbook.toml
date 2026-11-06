@@ -9,9 +9,6 @@ profile = "release"
 
 [package]
 binary = "ghenv"
-component = "cli"
-output = ".artifacts/build/ghenv"
-profile = "release"
 files = ["README.md"]
 version_arguments = ["--version"]
 version_template = "{binary} {version}\nsource: {commit}"
@@ -52,12 +49,6 @@ platform = "Darwin"
 arch = "arm64"
 extension = "tar.gz"
 checks = []
-
-[artifacts]
-paths = ["dist", ".artifacts/build", ".artifacts/native-package"]
-
-[artifacts.binary_environment]
-GHENV_TEST_BINARY = ".artifacts/build/ghenv"
 
 [lint]
 shell_paths = ["install.sh"]
