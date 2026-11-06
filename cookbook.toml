@@ -55,8 +55,6 @@ checks = []
 
 [artifacts]
 paths = ["dist", ".artifacts/build", ".artifacts/native-package"]
-environment = ["VERSION", "COMMIT", "DATE", "RUST_TARGET"]
-revision_environment = ["COMMIT"]
 
 [artifacts.binary_environment]
 GHENV_TEST_BINARY = ".artifacts/build/ghenv"
@@ -76,7 +74,6 @@ path = "tests/installer_test.py"
 paths = ["dist", "target", ".artifacts/build", ".artifacts/rust-target", ".artifacts/native-package", ".artifacts/advisory-db", ".artifacts/fixtures"]
 
 [ci]
-runner = "ubuntu-24.04"
 timeout_minutes = 20
 
 [publication]
