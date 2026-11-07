@@ -227,13 +227,13 @@ fn execute(args: &[String], raw_args: &[std::ffi::OsString], machine: bool) -> R
             );
         }
         "dev" => {
-            let message = "usage: ghenv dev [--mode auto|preview|local] [--config ghenv.json] -- COMMAND [ARG...]";
+            let message = "usage: ghenv dev [--mode auto|preview|local] [--config ghenv.toml] -- COMMAND [ARG...]";
             let (separator, command) = command(&args[1..], message)?;
             let flags = flags(
                 &args[1..separator + 1],
                 &[
                     ("mode", "auto"),
-                    ("config", "ghenv.json"),
+                    ("config", "ghenv.toml"),
                     ("timeout", "5m"),
                 ],
             )?;

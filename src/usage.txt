@@ -3,7 +3,7 @@ ghenv: run a local command with GitHub Actions secrets and variables.
 Usage:
   ghenv --version
   ghenv doctor --repo OWNER/REPO
-  ghenv dev [--mode auto|preview|local] [--config ghenv.json] -- COMMAND [ARG...]
+  ghenv dev [--mode auto|preview|local] [--config ghenv.toml] -- COMMAND [ARG...]
   ghenv run --repo OWNER/REPO --secrets NAME,OTHER --vars NAME -- COMMAND [ARG...]
   ghenv local -- COMMAND [ARG...]  (clean, credential-free; no GitHub request)
 
@@ -20,4 +20,4 @@ Requires gh auth login and Actions write access. No .env files are written.
 
 Machine results: ghenv --json version | doctor --repo OWNER/REPO | help
 Finite diagnostics emit one JSON result; launch commands preserve child streams, and seal preserves its encrypted binary protocol.
-Project settings default to ghenv.json; dev --config FILE selects an explicit project configuration.
+Project settings default to ghenv.toml; dev --config FILE selects an explicit project configuration.

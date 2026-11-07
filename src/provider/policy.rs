@@ -231,6 +231,13 @@ pub struct Project {
 }
 impl Project {
     pub fn read(path: impl AsRef<Path>) -> Result<Self> {
+        let path = path.as_ref();
+        if !path.exists()
+            && path.file_name().is_some_and(|name| name == "ghenv.toml")
+            && path.with_file_name("ghenv.json").symlink_metadata().is_ok()
+        {
+            return Err("legacy ghenv.json requires explicit conversion to ghenv.toml; legacy JSON v1 must be converted manually; no automatic import".into());
+        }
         let mut bytes = Vec::new();
         File::open(path)?
             .take((MAX_BUNDLE + 1) as u64)
@@ -238,7 +245,20 @@ impl Project {
         if bytes.len() > MAX_BUNDLE {
             return Err("invalid or oversized project configuration".into());
         }
-        let value = unique(&bytes).map_err(|_| "invalid project configuration JSON")?;
+        let text =
+            std::str::from_utf8(&bytes).map_err(|_| "invalid project configuration UTF-8")?;
+        let value =
+            crate::source_toml::parse(text).map_err(|_| "invalid project configuration TOML")?;
+        Self::from_value(value)
+    }
+    /// Explicit legacy-v1 codec for import/parity checks; never used by source discovery.
+    pub fn from_legacy_json_v1(bytes: &[u8]) -> Result<Self> {
+        if bytes.len() > MAX_BUNDLE {
+            return Err("invalid or oversized project configuration".into());
+        }
+        Self::from_value(unique(bytes).map_err(|_| "invalid project configuration JSON")?)
+    }
+    fn from_value(value: serde_json::Value) -> Result<Self> {
         let object = value
             .as_object()
             .ok_or("invalid project configuration JSON")?;

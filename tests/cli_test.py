@@ -1,5 +1,6 @@
 """Exercise the actual CLI, gh subprocess adapter, and child supervision."""
 import json
+from source_toml import source_text
 import os
 from pathlib import Path
 import signal
@@ -24,7 +25,7 @@ class CLI(unittest.TestCase):
             shim.write_text('#!'+sys.executable+'\n'+(Path(__file__).parent/'fake_gh.py').read_text())
             shim.chmod(0o700)
             self.env['PATH']=str(self.root)+os.pathsep+self.env['PATH']
-        (self.root/'ghenv.json').write_text(json.dumps(PROFILE))
+        (self.root/'ghenv.toml').write_text(source_text(PROFILE))
     def cli(self,*args,mode='success',timeout=15):
         return subprocess.run([str(BINARY),*args],cwd=self.root,env=self.env|dict(GHENV_TEST_MODE=mode),capture_output=True,text=True,encoding='utf-8',timeout=timeout)
     def run_request(self,*flags,mode='success',script='raise SystemExit(0)'):
@@ -107,8 +108,8 @@ class CLI(unittest.TestCase):
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertFalse((self.root/'calls.jsonl').exists())
     def test_invalid_profiles_fail_without_requesting_credentials(self):
-        for text in ['{}','null',json.dumps(PROFILE).replace('"version": 1','"version": 1, "version": 1'),json.dumps(PROFILE).replace('"secrets"','"Secrets"'),json.dumps(PROFILE).replace('"secrets"','"ſecrets"')]:
-            (self.root/'ghenv.json').write_text(text)
+        for text in ['{}','null',source_text(PROFILE) + 'version = 1\n',source_text(PROFILE).replace('"secrets"', '"Secrets"'),source_text(PROFILE).replace('"secrets"', '"ſecrets"')]:
+            (self.root/'ghenv.toml').write_text(text)
             result=self.cli('dev','--',sys.executable,'-c','raise SystemExit(0)')
             self.assertEqual(result.returncode,1)
         self.assertFalse((self.root/'calls.jsonl').exists())
