@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: dafaac4eceade96da03b7f95a81c487f41efb2760e7e23d63e6c7aa8e1fbe758 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 6609318195a3e57339d45eefcfdc7c66a42edbba34b4a60a991602f2b37fb5c5 -->
 
 # ghenv
 
@@ -166,20 +166,24 @@ source. `ghenv` does not remove inherited production settings or rewrite files.
 
 ## Project development runner
 
-A project can commit a public `ghenv.json` containing credential **names** and
+A project can commit a public `ghenv.toml` containing credential **names** and
 launch policy. Keep credential values in GitHub Preview. For example:
 
-```json
-{
-  "version": 1,
-  "repository": "OWNER/PROJECT",
-  "default_mode": "preview",
-  "secrets": "API_KEY",
-  "variables": "API_BASE_URL",
-  "prefixes": {"API_KEY": "test_"},
-  "aliases": {"APP_PUBLIC_API_URL": "API_BASE_URL"},
-  "environment": {"BUN_OPTIONS": "--no-env-file"}
-}
+```toml
+version = 1
+repository = "OWNER/PROJECT"
+default_mode = "preview"
+secrets = "API_KEY"
+variables = "API_BASE_URL"
+
+[prefixes]
+API_KEY = "test_"
+
+[aliases]
+APP_PUBLIC_API_URL = "API_BASE_URL"
+
+[environment]
+BUN_OPTIONS = "--no-env-file"
 ```
 
 ```sh
@@ -193,8 +197,8 @@ use `local` for a fixture stack that does not. `--mode local` always skips the
 GitHub handoff. A profile with no selected secrets or variables starts the same
 clean child in either mode without contacting GitHub.
 
-The runner reads `ghenv.json` from the current directory; `--config PATH`
-selects another profile. `--timeout` bounds the handoff and defaults to five
+The runner reads `ghenv.toml` from the current directory; `--config PATH`
+selects another TOML profile. Current-source builds refuse legacy JSON profiles; convert them explicitly before starting a session. Published binaries retain their released interface. The encrypted Preview bundle remains JSON. `--timeout` bounds the handoff and defaults to five
 minutes. Invalid profiles or failed Preview requests stop startup; they do not
 fall back to another mode.
 
@@ -203,11 +207,13 @@ entry names on failure. `aliases` maps a new environment name to a selected
 entry. An alias must be appropriate for its destination: browser-facing values
 must come from public entries. `environment` holds fixed **nonsecret** settings.
 Aliases and fixed entries cannot overwrite selected names. Unknown fields,
-duplicate JSON keys, invalid identifiers and unsupported modes are refused.
+duplicate TOML keys, invalid identifiers and unsupported modes are refused.
 The existing clean environment, dotenv boundary, interactive terminal handling,
 exit status and process-group cleanup also apply to `dev`.
 
-Projects own their development commands. Use `ghenv dev --config ghenv.json --mode local -- COMMAND` for an explicitly selected offline session, or wrap the native supervisor with `ghenv local -- COMMAND`. Deployment configuration is independent of development credentials.
+Projects own their development commands. Use `ghenv dev --config ghenv.toml --mode local -- COMMAND` for an explicitly selected offline session, or wrap the native supervisor with `ghenv local -- COMMAND`. Deployment configuration is independent of development credentials.
+
+Current-source migration is manual: create the named TOML source with the same effective settings and archive the legacy JSON v1 source outside the active configuration directory. No automatic import command is provided. Preserve explicit `false`, zero and empty arrays; omit null overrides only where they meant inheritance or defaults. Do not copy credentials into tracked source files. Existing installed settings are not migrated by a source update.
 
 ## Local development launchers
 
@@ -284,4 +290,4 @@ The verified executable is `.artifacts/build/ghenv`. CI retains Linux and macOS 
 
 Use `ghenv --json version`, `ghenv --json doctor --repo OWNER/REPO`, or `ghenv --json help` for one structured result on stdout. Diagnostics use stderr and failures exit nonzero. `doctor` verifies the existing GitHub authentication and workflow without requesting a secret bundle.
 
-`dev --config FILE` selects an explicit project configuration; the default is `ghenv.json`. Launch commands preserve their child process streams and exit status. `seal` retains its encrypted binary protocol. These commands reject `--json` before launching a child or acquiring secrets.
+`dev --config FILE` selects an explicit project configuration; the default is `ghenv.toml`. Launch commands preserve their child process streams and exit status. `seal` retains its encrypted binary protocol. These commands reject `--json` before launching a child or acquiring secrets.

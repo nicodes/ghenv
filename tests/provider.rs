@@ -8,10 +8,7 @@ fn key() -> PrivateKey {
     PrivateKey::from_pkcs8(include_bytes!("fixtures/test-key.p8")).unwrap()
 }
 fn profile(text: &str) -> provider::Result<Project> {
-    let root = tempfile::tempdir()?;
-    let path = root.path().join("ghenv.json");
-    fs::write(&path, text)?;
-    Project::read(path)
+    Project::from_legacy_json_v1(text.as_bytes())
 }
 #[test]
 fn go_envelope_and_rust_envelope_share_the_v1_protocol() {
@@ -295,4 +292,33 @@ fn context_deadline_and_explicit_cancellation_are_bounded() {
     let clone = context.clone();
     clone.cancel();
     assert!(context.check().is_err());
+}
+
+#[test]
+fn canonical_toml_profiles_use_the_same_policy_and_refuse_legacy_files() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("ghenv.toml");
+    let value: Value = serde_json::from_str(PROFILE).unwrap();
+    fs::write(&path, toml::to_string(&value).unwrap()).unwrap();
+    let project = Project::read(&path).unwrap();
+    assert_eq!(project.repository, "owner/project");
+    assert_eq!(project.environment["BUN_OPTIONS"], "--no-env-file");
+    for invalid in [
+        PROFILE,
+        "version = 1\nversion = 1",
+        "version = 1\nrepository = 'owner/project'\ndefault_mode = 'preview'\nunknown = true",
+    ] {
+        fs::write(&path, invalid).unwrap();
+        assert!(Project::read(&path).is_err());
+    }
+    fs::remove_file(&path).unwrap();
+    fs::write(root.path().join("ghenv.json"), PROFILE).unwrap();
+    assert!(
+        Project::read(&path)
+            .err()
+            .unwrap()
+            .to_string()
+            .contains("JSON v1")
+    );
+    assert!(!path.exists());
 }
