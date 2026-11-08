@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 6609318195a3e57339d45eefcfdc7c66a42edbba34b4a60a991602f2b37fb5c5 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 0fec7fbcc35ea138ee87f53fb4c7a74089aee9c4a42be8bf1eb5d02debcfc0e7 -->
 
 # ghenv
 
@@ -227,7 +227,7 @@ Pin a released CLI in your tool manifest, for example:
 Wrap the existing development supervisor once per session:
 
 ```sh
-ghenv run --clean-env --repo OWNER/PROJECT --secrets API_KEY --vars PUBLIC_KEY -- make product-dev
+ghenv run --clean-env --repo OWNER/PROJECT --secrets API_KEY --vars PUBLIC_KEY -- mise run product-dev
 ```
 
 `run` isolates the child by default; `--clean-env` explicitly selects the same behavior. It keeps terminal settings, executable/tool/cache paths and the SSH
@@ -238,7 +238,7 @@ handoff. Only the selected Preview values reach the application. Expo dotenv
 loading is disabled with `EXPO_NO_DOTENV=1`. Other dotenv readers must be removed
 from the application's local launch commands so they cannot override the handoff.
 Pass local ports and other nonsecret options as command arguments. Do not request
-production database URLs or deploy keys. Credential-free workflows can use `ghenv local -- make product-dev` to apply
+production database URLs or deploy keys. Credential-free workflows can use `ghenv local -- mise run product-dev` to apply
 the same environment isolation without GitHub authentication or an Actions round trip.
 
 To reuse existing individual Preview secrets and variables, see the explicit
@@ -271,18 +271,18 @@ cargo build --release --locked
 
 ## Contributor verification
 
-`mise.toml` pins contributor SDKs. The generated root Makefile selects an immutable shared cookbook revision and binds it to `cookbook.toml`.
+`mise.toml` pins contributor SDKs. The canonical generated task block in root `mise.toml` selects an immutable shared cookbook revision and binds it to `cookbook.toml`.
 
 ```sh
-make help
-make setup
-make build
-make test
+mise run help
+mise run setup
+mise run build
+mise run test
 ```
 
-`make help` works offline before setup. `make setup` explicitly prepares pinned SDKs, locked dependencies and declared fixtures. `make build` compiles and packages the native outputs, then validates their source and artifact identity. `make test` runs the implemented checks against those current-source outputs. Run build again after changing source; tests do not install tools or build missing shipping artifacts.
+`mise run help` works offline before setup. `mise run setup` explicitly prepares pinned SDKs, locked dependencies and declared fixtures. `mise run build` compiles and packages the native outputs, then validates their source and artifact identity. `mise run test` runs the implemented checks against those current-source outputs. Run build again after changing source; tests do not install tools or build missing shipping artifacts.
 
-Use `make fmt` to apply formatting, `make test:lint`, `make test:unit`, `make test:security` or `make test:integration` to select a group. This recipe has no application development service. `make clean` removes declared generated outputs. Build and test evidence stays in `.artifacts/verification`.
+Use `mise run fmt` to apply formatting, `mise run test:lint`, `mise run test:unit`, `mise run test:security` or `mise run test:integration` to select a group. This recipe has no application development service. `mise run clean` removes declared generated outputs. Build and test evidence stays in `.artifacts/verification`.
 
 The verified executable is `.artifacts/build/ghenv`. CI retains Linux and macOS archives for both x86_64 and arm64. Native provider/archive tests, protocol fixtures, CLI cancellation and terminal behavior, environment isolation and installer refusal checks remain product-owned. End users install the published distribution; contributor checks do not request a secret bundle.
 
