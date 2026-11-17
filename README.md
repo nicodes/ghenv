@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: a92e22274cfa39fcbb05a00b0ee7c3743b16a321e49e8213d9aab859b60bca5b -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: cc559df24e0584eb83b79b72ef1f10037dcd0f290b5c12ce04971ff9b8ed2d46 -->
 
 # ghenv
 
@@ -255,7 +255,7 @@ use std::time::Duration;
 
 let context = Context::new(Duration::from_secs(300))?;
 let parent: Values = std::env::vars().collect();
-let environment = prepare(&context, "profile.json", "auto", &parent)?;
+let environment = prepare(&context, "profile.toml", "auto", &parent)?;
 ```
 
 The profile uses the version 1 project fields above. `prepare` returns an isolated child environment. `fetch` accepts an explicit `Request`; `seal_bundle` implements the workflow export boundary. `Context` supports a deadline and explicit cancellation. No plaintext credential file is created. The encrypted `ghenv-v1` protocol remains compatible with existing workflow exporters. Earlier immutable Go module tags remain available for older consumers.
