@@ -212,7 +212,7 @@ fn execute(args: &[String], raw_args: &[std::ffi::OsString], machine: bool) -> R
                 );
             } else {
                 println!(
-                    "GitHub authentication: ready\nghenv.yml workflow: active\nDispatch permissions, Preview approval and requested bundle names are checked when you run a command.\nUse ghenv local -- COMMAND for an offline session."
+                    "GitHub authentication: ready\npreview-handoff.yml workflow: active\nDispatch permissions, Preview approval and requested bundle names are checked when you run a command.\nUse ghenv local -- COMMAND for an offline session."
                 );
             }
         }

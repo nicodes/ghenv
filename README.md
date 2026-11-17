@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 0fec7fbcc35ea138ee87f53fb4c7a74089aee9c4a42be8bf1eb5d02debcfc0e7 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: a92e22274cfa39fcbb05a00b0ee7c3743b16a321e49e8213d9aab859b60bca5b -->
 
 # ghenv
 
@@ -39,7 +39,7 @@ For a project repository, use the small dispatch workflow from
 full action commit. It builds the reviewed exporter, handles encrypted artifact
 upload, and cleans temporary files without checking out application code.
 The workflow in this CLI repository is the standalone implementation for CLI
-development. For the normal setup, install the workflow on the default branch. `--ref`
+development. For the normal setup, install it as `.github/workflows/preview-handoff.yml` on the default branch. `--ref`
 defaults to `main` and must identify a trusted workflow revision.
 
 Create a GitHub environment named **`Preview`**. Its owner must curate a single
@@ -133,7 +133,7 @@ process group can escape that cleanup. SIGKILL of `ghenv` itself cannot run clea
 ## Encrypted handoff
 
 1. The CLI generates a temporary RSA-3072 key pair in memory and dispatches
-   `ghenv.yml` with its public key and requested names.
+   `preview-handoff.yml` with its public key and requested names.
 2. The workflow validates the fixed Preview bundle and selects permitted entries.
    AES-256-GCM encrypts the JSON, and RSA-OAEP-SHA256 wraps the random AES key.
    The unique request ID authenticates the payload.

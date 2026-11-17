@@ -65,7 +65,11 @@ class CLI(unittest.TestCase):
                 self.assertNotIn('synthetic line',result.stdout+result.stderr)
     @unittest.skipIf(os.name=='nt','synthetic gh executable requires POSIX shebang support')
     def test_doctor_and_api_errors_are_actionable_and_redacted(self):
-        self.assertIn('GitHub authentication: ready',self.cli('doctor','--repo','owner/repo').stdout)
+        status=self.cli('doctor','--repo','owner/repo').stdout
+        self.assertIn('GitHub authentication: ready',status)
+        self.assertIn('preview-handoff.yml workflow: active',status)
+        calls=[json.loads(line) for line in (self.root/'calls.jsonl').read_text().splitlines()]
+        self.assertIn(['GET','repos/owner/repo/actions/workflows/preview-handoff.yml'],calls)
         for mode,code in [('auth-required','github_auth_required'),('disabled','workflow_disabled'),('error-401','github_auth_required'),('error-403','github_access_denied'),('error-429','github_access_denied'),('error-404','github_not_found'),('error-422','github_invalid_dispatch'),('error-500','github_request_failed')]:
             with self.subTest(mode=mode):
                 result=self.cli('doctor','--repo','owner/repo',mode=mode)

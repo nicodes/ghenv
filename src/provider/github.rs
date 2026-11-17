@@ -185,7 +185,7 @@ fn api(context: &Context, method: &str, path: &str, body: Option<Value>) -> Resu
         } else if text.contains("HTTP 404") {
             (
                 "github_not_found",
-                "check repository access and install .github/workflows/ghenv.yml on the default branch",
+                "check repository access and install .github/workflows/preview-handoff.yml on the default branch",
             )
         } else if text.contains("HTTP 422") {
             (
@@ -218,14 +218,15 @@ pub fn check_workflow(context: &Context, repo: &str) -> Result<()> {
     let output = api(
         context,
         "GET",
-        &format!("repos/{repo}/actions/workflows/ghenv.yml"),
+        &format!("repos/{repo}/actions/workflows/preview-handoff.yml"),
         None,
     )?;
     let value: Value = serde_json::from_slice(&output)
         .map_err(|_| "invalid_workflow_response: GitHub returned invalid workflow metadata")?;
     if value["state"] != "active" {
         return Err(
-            "workflow_disabled: enable .github/workflows/ghenv.yml in GitHub Actions".into(),
+            "workflow_disabled: enable .github/workflows/preview-handoff.yml in GitHub Actions"
+                .into(),
         );
     }
     Ok(())
@@ -256,7 +257,7 @@ pub fn fetch(context: &Context, request: &Request) -> Result<Values> {
     let output = api(
         context,
         "POST",
-        &format!("{prefix}/workflows/ghenv.yml/dispatches"),
+        &format!("{prefix}/workflows/preview-handoff.yml/dispatches"),
         Some(
             json!({"ref":request.reference,"return_run_details":true,"inputs":{"environment":request.environment,"request_id":id,"public_key":private.public_key()?,"secret_names":request.secrets,"variable_names":request.variables}}),
         ),

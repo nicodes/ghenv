@@ -1,5 +1,5 @@
-name: Local Environment
-run-name: ghenv ${{ inputs.request_id }}
+name: Preview handoff
+run-name: "Preview handoff · ${{ inputs.request_id }}"
 
 on:
   workflow_dispatch:
