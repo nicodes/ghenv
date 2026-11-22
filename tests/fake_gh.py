@@ -23,10 +23,11 @@ if mode=='oversized':
     sys.stdout.buffer.write(b'x'*((4<<20)+1))
     sys.exit(0)
 if mode=='hang': time.sleep(30)
-if path.endswith('/workflows/preview-handoff.yml'):
+workflow='pr-preview.yml' if mode=='consolidated' else 'preview-handoff.yml'
+if path.endswith('/workflows/'+workflow):
     print(json.dumps(dict(state='disabled' if mode=='disabled' else 'active')))
 elif method=='POST':
-    assert path=='repos/owner/repo/actions/workflows/preview-handoff.yml/dispatches'
+    assert path=='repos/owner/repo/actions/workflows/'+workflow+'/dispatches'
     request=json.load(sys.stdin)
     assert request['return_run_details'] is True
     assert request['ref']=='main'

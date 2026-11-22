@@ -134,6 +134,7 @@ fn bundle_scope_types_ambiguity_and_selection_are_checked_before_export() {
 #[test]
 fn public_request_validation_refuses_unsupported_scope_and_names() {
     let valid = Request {
+        workflow: Default::default(),
         repo: "owner/repo".into(),
         environment: "Preview".into(),
         reference: "main".into(),

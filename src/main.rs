@@ -191,9 +191,14 @@ fn execute(args: &[String], raw_args: &[std::ffi::OsString], machine: bool) -> R
                 }
                 return Ok(0);
             }
-            let flags = flags(&args[1..], &[("repo", "")])?;
+            let flags = flags(
+                &args[1..],
+                &[("repo", ""), ("workflow", "preview-handoff.yml")],
+            )?;
+            let workflow: provider::HandoffWorkflow = flags["workflow"].parse()?;
             Request {
                 repo: flags["repo"].clone(),
+                workflow,
                 environment: "Preview".into(),
                 reference: "main".into(),
                 secrets: String::new(),
@@ -204,7 +209,7 @@ fn execute(args: &[String], raw_args: &[std::ffi::OsString], machine: bool) -> R
             if !provider::github_auth_status(&context)? {
                 return Err("github_auth_required: run gh auth login --hostname github.com".into());
             }
-            provider::check_workflow(&context, &flags["repo"])?;
+            provider::check_workflow(&context, &flags["repo"], workflow)?;
             if machine {
                 println!(
                     "{}",
@@ -212,7 +217,8 @@ fn execute(args: &[String], raw_args: &[std::ffi::OsString], machine: bool) -> R
                 );
             } else {
                 println!(
-                    "GitHub authentication: ready\npreview-handoff.yml workflow: active\nDispatch permissions, Preview approval and requested bundle names are checked when you run a command.\nUse ghenv local -- COMMAND for an offline session."
+                    "GitHub authentication: ready\n{} workflow: active\nDispatch permissions, Preview approval and requested bundle names are checked when you run a command.\nUse ghenv local -- COMMAND for an offline session.",
+                    workflow.filename()
                 );
             }
         }
@@ -253,6 +259,7 @@ fn execute(args: &[String], raw_args: &[std::ffi::OsString], machine: bool) -> R
                 &args[1..separator + 1],
                 &[
                     ("repo", ""),
+                    ("workflow", "preview-handoff.yml"),
                     ("env", "Preview"),
                     ("ref", "main"),
                     ("secrets", ""),
@@ -268,6 +275,7 @@ fn execute(args: &[String], raw_args: &[std::ffi::OsString], machine: bool) -> R
             let clean = boolean(&flags["clean-env"])?;
             let request = Request {
                 repo: flags["repo"].clone(),
+                workflow: flags["workflow"].parse()?,
                 environment: flags["env"].clone(),
                 reference: flags["ref"].clone(),
                 secrets: flags["secrets"].clone(),

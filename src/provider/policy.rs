@@ -10,11 +10,43 @@ use std::{
     fs::File,
     io::Read,
     path::Path,
+    str::FromStr,
 };
+
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
+pub enum HandoffWorkflow {
+    #[default]
+    #[serde(rename = "preview-handoff.yml")]
+    Standalone,
+    #[serde(rename = "pr-preview.yml")]
+    PullRequestPreview,
+}
+
+impl HandoffWorkflow {
+    pub fn filename(self) -> &'static str {
+        match self {
+            Self::Standalone => "preview-handoff.yml",
+            Self::PullRequestPreview => "pr-preview.yml",
+        }
+    }
+}
+
+impl FromStr for HandoffWorkflow {
+    type Err = &'static str;
+
+    fn from_str(value: &str) -> std::result::Result<Self, Self::Err> {
+        match value {
+            "preview-handoff.yml" => Ok(Self::Standalone),
+            "pr-preview.yml" => Ok(Self::PullRequestPreview),
+            _ => Err("workflow must be preview-handoff.yml or pr-preview.yml"),
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Request {
     pub repo: String,
+    pub workflow: HandoffWorkflow,
     pub environment: String,
     pub reference: String,
     pub secrets: String,
@@ -32,6 +64,10 @@ impl Request {
         }
         if self.reference.is_empty() {
             return Err("a trusted workflow ref is required".into());
+        }
+        if matches!(self.workflow, HandoffWorkflow::PullRequestPreview) && self.reference != "main"
+        {
+            return Err("the consolidated preview handoff runs on main".into());
         }
         names(&self.secrets, &self.variables)?;
         Ok(())
@@ -216,6 +252,7 @@ pub struct Project {
     pub version: u32,
     #[serde(deserialize_with = "string_or_null")]
     pub repository: String,
+    pub workflow: HandoffWorkflow,
     #[serde(deserialize_with = "string_or_null")]
     pub default_mode: String,
     #[serde(deserialize_with = "string_or_null")]
@@ -266,6 +303,7 @@ impl Project {
             if ![
                 "version",
                 "repository",
+                "workflow",
                 "default_mode",
                 "secrets",
                 "variables",
@@ -335,6 +373,7 @@ impl Project {
         if mode == "preview" && (!self.secrets.is_empty() || !self.variables.is_empty()) {
             let request = Request {
                 repo: self.repository.clone(),
+                workflow: self.workflow,
                 environment: "Preview".into(),
                 reference: "main".into(),
                 secrets: self.secrets.clone(),
