@@ -8,7 +8,8 @@ Usage:
   ghenv local -- COMMAND [ARG...]  (clean, credential-free; no GitHub request)
 
 Options (before --):
-  --repo       GitHub repository containing the preview-handoff.yml workflow (required)
+  --repo       GitHub repository containing the handoff workflow (required)
+  --workflow   preview-handoff.yml (default) or the consolidated pr-preview.yml
   --env        GitHub environment (only Preview is permitted)
   --ref        Trusted workflow Git ref (default: main)
   --secrets    Comma-separated secret names to inject

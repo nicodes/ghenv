@@ -1,5 +1,5 @@
 use super::policy::names;
-use super::{MAX_PAYLOAD, PrivateKey, Request, Result, Values, unseal};
+use super::{HandoffWorkflow, MAX_PAYLOAD, PrivateKey, Request, Result, Values, unseal};
 use aws_lc_rs::rand::{SecureRandom, SystemRandom};
 use serde_json::{Value, json};
 use std::{
@@ -206,28 +206,30 @@ fn api(context: &Context, method: &str, path: &str, body: Option<Value>) -> Resu
     }
     Ok(output)
 }
-pub fn check_workflow(context: &Context, repo: &str) -> Result<()> {
+pub fn check_workflow(context: &Context, repo: &str, workflow: HandoffWorkflow) -> Result<()> {
     Request {
         repo: repo.into(),
+        workflow,
         environment: "Preview".into(),
         reference: "main".into(),
         secrets: String::new(),
         variables: "GHENV_PREFLIGHT".into(),
     }
     .validate()?;
+    let filename = workflow.filename();
     let output = api(
         context,
         "GET",
-        &format!("repos/{repo}/actions/workflows/preview-handoff.yml"),
+        &format!("repos/{repo}/actions/workflows/{filename}"),
         None,
     )?;
     let value: Value = serde_json::from_slice(&output)
         .map_err(|_| "invalid_workflow_response: GitHub returned invalid workflow metadata")?;
     if value["state"] != "active" {
-        return Err(
-            "workflow_disabled: enable .github/workflows/preview-handoff.yml in GitHub Actions"
-                .into(),
-        );
+        return Err(format!(
+            "workflow_disabled: enable .github/workflows/{filename} in GitHub Actions"
+        )
+        .into());
     }
     Ok(())
 }
@@ -254,10 +256,11 @@ pub fn fetch(context: &Context, request: &Request) -> Result<Values> {
         .map_err(|_| "cannot generate request ID")?;
     let id: String = random.iter().map(|byte| format!("{byte:02x}")).collect();
     let prefix = format!("repos/{}/actions", request.repo);
+    let workflow = request.workflow.filename();
     let output = api(
         context,
         "POST",
-        &format!("{prefix}/workflows/preview-handoff.yml/dispatches"),
+        &format!("{prefix}/workflows/{workflow}/dispatches"),
         Some(
             json!({"ref":request.reference,"return_run_details":true,"inputs":{"environment":request.environment,"request_id":id,"public_key":private.public_key()?,"secret_names":request.secrets,"variable_names":request.variables}}),
         ),
