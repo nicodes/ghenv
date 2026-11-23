@@ -67,9 +67,9 @@ class CLI(unittest.TestCase):
     def test_doctor_and_api_errors_are_actionable_and_redacted(self):
         status=self.cli('doctor','--repo','owner/repo').stdout
         self.assertIn('GitHub authentication: ready',status)
-        self.assertIn('preview-handoff.yml workflow: active',status)
+        self.assertIn('pr-preview.yml workflow: active',status)
         calls=[json.loads(line) for line in (self.root/'calls.jsonl').read_text().splitlines()]
-        self.assertIn(['GET','repos/owner/repo/actions/workflows/preview-handoff.yml'],calls)
+        self.assertIn(['GET','repos/owner/repo/actions/workflows/pr-preview.yml'],calls)
         for mode,code in [('auth-required','github_auth_required'),('disabled','workflow_disabled'),('error-401','github_auth_required'),('error-403','github_access_denied'),('error-429','github_access_denied'),('error-404','github_not_found'),('error-422','github_invalid_dispatch'),('error-500','github_request_failed')]:
             with self.subTest(mode=mode):
                 result=self.cli('doctor','--repo','owner/repo',mode=mode)
@@ -77,17 +77,17 @@ class CLI(unittest.TestCase):
                 self.assertIn(code,result.stderr)
                 self.assertNotIn('synthetic-private-sentinel',result.stdout+result.stderr)
     @unittest.skipIf(os.name=='nt','synthetic gh executable requires POSIX shebang support')
-    def test_consolidated_preview_is_explicit_and_uses_the_same_handoff_protocol(self):
+    def test_dev_uses_the_preview_handoff_and_requires_main(self):
         (self.root/'ghenv.toml').write_text(source_text(PROFILE | dict(workflow='pr-preview.yml')))
-        doctor=self.cli('doctor','--repo','owner/repo','--workflow','pr-preview.yml',mode='consolidated')
+        doctor=self.cli('doctor','--repo','owner/repo','--workflow','pr-preview.yml')
         self.assertEqual(doctor.returncode,0,doctor.stderr)
         self.assertIn('pr-preview.yml workflow: active',doctor.stdout)
-        dev=self.cli('dev','--',sys.executable,'-c','import os; assert os.environ["PUBLIC_URL"] == "http://localhost:3000"',mode='consolidated')
+        dev=self.cli('dev','--',sys.executable,'-c','import os; assert os.environ["PUBLIC_URL"] == "http://localhost:3000"')
         self.assertEqual(dev.returncode,0,dev.stderr)
         self.assertTrue((self.root/'deleted').exists())
         calls=(self.root/'calls.jsonl').read_text()
         self.assertIn('/workflows/pr-preview.yml/dispatches',calls)
-        refusal=self.run_request('--workflow','pr-preview.yml','--ref','feature',mode='consolidated')
+        refusal=self.run_request('--workflow','pr-preview.yml','--ref','feature')
         self.assertNotEqual(refusal.returncode,0)
         self.assertIn('handoff runs on main',refusal.stderr)
         self.assertEqual((self.root/'calls.jsonl').read_text(),calls)

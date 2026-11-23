@@ -9,7 +9,7 @@ Usage:
 
 Options (before --):
   --repo       GitHub repository containing the handoff workflow (required)
-  --workflow   preview-handoff.yml (default) or the consolidated pr-preview.yml
+  --workflow   pr-preview.yml (default)
   --env        GitHub environment (only Preview is permitted)
   --ref        Trusted workflow Git ref (default: main)
   --secrets    Comma-separated secret names to inject
