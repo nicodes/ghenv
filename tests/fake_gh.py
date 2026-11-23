@@ -23,7 +23,7 @@ if mode=='oversized':
     sys.stdout.buffer.write(b'x'*((4<<20)+1))
     sys.exit(0)
 if mode=='hang': time.sleep(30)
-workflow='pr-preview.yml' if mode=='consolidated' else 'preview-handoff.yml'
+workflow='pr-preview.yml'
 if path.endswith('/workflows/'+workflow):
     print(json.dumps(dict(state='disabled' if mode=='disabled' else 'active')))
 elif method=='POST':

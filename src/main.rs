@@ -191,10 +191,7 @@ fn execute(args: &[String], raw_args: &[std::ffi::OsString], machine: bool) -> R
                 }
                 return Ok(0);
             }
-            let flags = flags(
-                &args[1..],
-                &[("repo", ""), ("workflow", "preview-handoff.yml")],
-            )?;
+            let flags = flags(&args[1..], &[("repo", ""), ("workflow", "pr-preview.yml")])?;
             let workflow: provider::HandoffWorkflow = flags["workflow"].parse()?;
             Request {
                 repo: flags["repo"].clone(),
@@ -259,7 +256,7 @@ fn execute(args: &[String], raw_args: &[std::ffi::OsString], machine: bool) -> R
                 &args[1..separator + 1],
                 &[
                     ("repo", ""),
-                    ("workflow", "preview-handoff.yml"),
+                    ("workflow", "pr-preview.yml"),
                     ("env", "Preview"),
                     ("ref", "main"),
                     ("secrets", ""),

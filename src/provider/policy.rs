@@ -16,8 +16,6 @@ use std::{
 #[derive(Clone, Copy, Debug, Default, Deserialize)]
 pub enum HandoffWorkflow {
     #[default]
-    #[serde(rename = "preview-handoff.yml")]
-    Standalone,
     #[serde(rename = "pr-preview.yml")]
     PullRequestPreview,
 }
@@ -25,7 +23,6 @@ pub enum HandoffWorkflow {
 impl HandoffWorkflow {
     pub fn filename(self) -> &'static str {
         match self {
-            Self::Standalone => "preview-handoff.yml",
             Self::PullRequestPreview => "pr-preview.yml",
         }
     }
@@ -36,9 +33,8 @@ impl FromStr for HandoffWorkflow {
 
     fn from_str(value: &str) -> std::result::Result<Self, Self::Err> {
         match value {
-            "preview-handoff.yml" => Ok(Self::Standalone),
             "pr-preview.yml" => Ok(Self::PullRequestPreview),
-            _ => Err("workflow must be preview-handoff.yml or pr-preview.yml"),
+            _ => Err("workflow must be pr-preview.yml"),
         }
     }
 }
@@ -62,12 +58,8 @@ impl Request {
                 "local runs only support the Preview environment; production is refused".into(),
             );
         }
-        if self.reference.is_empty() {
-            return Err("a trusted workflow ref is required".into());
-        }
-        if matches!(self.workflow, HandoffWorkflow::PullRequestPreview) && self.reference != "main"
-        {
-            return Err("the consolidated preview handoff runs on main".into());
+        if self.reference != "main" {
+            return Err("the preview handoff runs on main".into());
         }
         names(&self.secrets, &self.variables)?;
         Ok(())

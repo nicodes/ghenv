@@ -185,7 +185,7 @@ fn api(context: &Context, method: &str, path: &str, body: Option<Value>) -> Resu
         } else if text.contains("HTTP 404") {
             (
                 "github_not_found",
-                "check repository access and install .github/workflows/preview-handoff.yml on the default branch",
+                "check repository access and install .github/workflows/pr-preview.yml on the default branch",
             )
         } else if text.contains("HTTP 422") {
             (

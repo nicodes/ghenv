@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: cc559df24e0584eb83b79b72ef1f10037dcd0f290b5c12ce04971ff9b8ed2d46 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 01fb96ec4d2ba8c0920951c1c2ff6d59c418d9fb1d75081ecf33b85520aac863 -->
 
 # ghenv
 
@@ -38,9 +38,9 @@ For a project repository, use the small dispatch workflow from
 [`ghenv-actions`](https://github.com/nicodes/ghenv-actions), pinned to a reviewed
 full action commit. It builds the reviewed exporter, handles encrypted artifact
 upload, and cleans temporary files without checking out application code.
-The workflow in this CLI repository is the standalone implementation for CLI
-development. For the normal setup, install it as `.github/workflows/preview-handoff.yml` on the default branch. `--ref`
-defaults to `main` and must identify a trusted workflow revision.
+Install the handoff as `.github/workflows/pr-preview.yml` on `main`. If the
+project already uses Cookbook PR previews, add its manual handoff to that
+workflow. The handoff runs on `main` in the protected Preview environment.
 
 Create a GitHub environment named **`Preview`**. Its owner must curate a single
 secret named **`GHENV_PREVIEW_BUNDLE`** containing JSON like this:
@@ -133,7 +133,7 @@ process group can escape that cleanup. SIGKILL of `ghenv` itself cannot run clea
 ## Encrypted handoff
 
 1. The CLI generates a temporary RSA-3072 key pair in memory and dispatches
-   `preview-handoff.yml` with its public key and requested names.
+   `pr-preview.yml` with its public key and requested names.
 2. The workflow validates the fixed Preview bundle and selects permitted entries.
    AES-256-GCM encrypts the JSON, and RSA-OAEP-SHA256 wraps the random AES key.
    The unique request ID authenticates the payload.
