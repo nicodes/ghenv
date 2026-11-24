@@ -65,6 +65,7 @@ path = "tests/installer_test.py"
 paths = ["dist", "target", ".artifacts/build", ".artifacts/rust-target", ".artifacts/native-package", ".artifacts/advisory-db", ".artifacts/fixtures"]
 
 [ci]
+single_job = true
 timeout_minutes = 20
 
 [publication]
